@@ -26,7 +26,7 @@ import { formatCount, formatMinor } from "@/lib/format";
 export default function HomePage() {
   return (
     <div className="mx-auto max-w-7xl space-y-14 px-4 py-10 sm:px-6 lg:space-y-20 lg:py-14">
-      <section className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_26rem]">
+      <section className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_26rem]">
         <Hero />
         <Suspense fallback={<LiveInventorySkeleton />}>
           <LiveInventoryPanel />

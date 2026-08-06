@@ -67,7 +67,7 @@ export default async function ProductPage(props: PageProps<"/product/[slug]">) {
         </ol>
       </nav>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_24rem]">
         <div className="space-y-6">
           <Panel className="relative overflow-hidden p-8 sm:p-10">
             <PlatformMark

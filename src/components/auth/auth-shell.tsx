@@ -24,7 +24,7 @@ export function AuthShell({
 }) {
   return (
     <div className="mx-auto flex max-w-4xl items-center px-4 py-12 sm:px-6 lg:py-20">
-      <Panel className="grid w-full overflow-hidden md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
+      <Panel className="grid w-full grid-cols-1 overflow-hidden md:grid-cols-[minmax(0,20rem)_minmax(0,1fr)]">
         <div className="relative hidden flex-col justify-between border-r border-line bg-surface-2 p-8 md:flex">
           <div
             aria-hidden="true"
