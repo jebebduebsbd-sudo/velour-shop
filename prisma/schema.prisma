@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  username     String        @unique
+  passwordHash String
+  balanceCents Int           @default(0)
+  createdAt    DateTime      @default(now())
+  sessions     Session[]
+  transactions Transaction[]
+  purchases    Purchase[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Transaction {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // topup | purchase | transfer_in | transfer_out | withdraw | refund
+  type        String
+  // positive = money in, negative = money out (in cents)
+  amountCents Int
+  // card | wallet | crypto | internal
+  method      String?
+  status      String   @default("complete")
+  reference   String   @unique
+  description String
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Purchase {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  itemId     String
+  category   String
+  title      String
+  priceCents Int
+  status     String   @default("delivered")
+  createdAt  DateTime @default(now())
+
+  @@index([userId])
+}
