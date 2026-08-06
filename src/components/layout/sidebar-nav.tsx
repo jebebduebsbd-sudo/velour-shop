@@ -67,8 +67,29 @@ const SECTIONS = [
   },
 ] as const;
 
+const ALL_HREFS = SECTIONS.flatMap((section) =>
+  section.items.map((item) => item.href),
+);
+
+/**
+ * Resolves the single active entry by longest prefix match, so a nested route
+ * such as /account/security highlights "Security" without also lighting up
+ * its parent "Profile" (/account).
+ */
+function activeHref(pathname: string): string | null {
+  let best: string | null = null;
+  for (const href of ALL_HREFS) {
+    const matches = pathname === href || pathname.startsWith(`${href}/`);
+    if (matches && (best === null || href.length > best.length)) {
+      best = href;
+    }
+  }
+  return best;
+}
+
 export function SidebarNav() {
   const pathname = usePathname();
+  const current = activeHref(pathname);
 
   return (
     <nav aria-label="Account" className="space-y-6">
@@ -79,10 +100,7 @@ export function SidebarNav() {
           </p>
           <ul className="space-y-0.5">
             {section.items.map((item) => {
-              const active =
-                pathname === item.href ||
-                (item.href !== "/market" &&
-                  pathname.startsWith(`${item.href}/`));
+              const active = current === item.href;
               return (
                 <li key={item.href}>
                   <Link
