@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProductStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+enum DeliveryType {
+  INSTANT_CODE
+  MANUAL
+}
+
+enum InventoryStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+  DISABLED
+}
+
+model Category {
+  id        String    @id @default(cuid())
+  slug      String    @unique
+  name      String
+  blurb     String
+  sortOrder Int       @default(0)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  products  Product[]
+
+  @@index([sortOrder])
+}
+
+model Product {
+  id          String          @id @default(cuid())
+  slug        String          @unique
+  title       String
+  subtitle    String?
+  /// Marketing description. Must not claim anything the deliverable does not include.
+  description String
+  /// Exact statement of what the buyer receives (shown verbatim on the product page).
+  deliverable String
+  categoryId  String
+  category    Category        @relation(fields: [categoryId], references: [id])
+  /// Price in integer minor units (e.g. cents). Never floating point.
+  priceMinor  Int
+  currency    String          @default("USD")
+  delivery    DeliveryType    @default(INSTANT_CODE)
+  status      ProductStatus   @default(ACTIVE)
+  /// Plain-language warranty statement for this product.
+  warranty    String
+  /// Region or platform restrictions shown to the buyer before purchase.
+  region      String          @default("Global")
+  featured    Boolean         @default(false)
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  units       InventoryUnit[]
+
+  @@index([categoryId, status])
+  @@index([featured, status])
+}
+
+model InventoryUnit {
+  id                 String          @id @default(cuid())
+  productId          String
+  product            Product         @relation(fields: [productId], references: [id])
+  status             InventoryStatus @default(AVAILABLE)
+  /// AES-256-GCM ciphertext of the authorized deliverable (code / key / voucher).
+  /// Keys live outside the database (DELIVERY_MASTER_KEY_B64).
+  payloadCiphertext  Bytes
+  /// HMAC fingerprint of the plaintext payload, used for de-duplication only.
+  payloadFingerprint String          @unique
+  reservedAt         DateTime?
+  soldAt             DateTime?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  @@index([productId, status])
+}

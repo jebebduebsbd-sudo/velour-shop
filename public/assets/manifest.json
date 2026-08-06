@@ -1,0 +1,95 @@
+{
+  "note": "Every binary/vector asset stored in public/assets is documented here. All other visuals (gradients, emblem, decorative lines) are original code-drawn SVG/CSS in the repository. Nothing is hotlinked.",
+  "assets": [
+    {
+      "localPath": "public/assets/platforms/fortnite.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/fortnite.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/valorant.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/valorant.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/steam.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/steam.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/discord.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/discord.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/tiktok.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/tiktok.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/instagram.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/instagram.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/roblox.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/roblox.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/rockstar.svg",
+      "originalSourceUrl": "https://simpleicons.org/icons/rockstargames.svg",
+      "sourceName": "Simple Icons (npm: simple-icons)",
+      "licenseType": "CC0-1.0 (icon set artwork)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted for the SVG artwork under CC0-1.0. The mark itself remains a trademark of its owner and is used nominatively to identify a marketplace category only.",
+      "attributionRequirement": "None (CC0-1.0)."
+    },
+    {
+      "localPath": "public/assets/platforms/minecraft.svg",
+      "originalSourceUrl": null,
+      "sourceName": "Original artwork created for Velour",
+      "licenseType": "Project license (original work)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted (original work).",
+      "attributionRequirement": "None."
+    },
+    {
+      "localPath": "public/assets/platforms/escape-from-tarkov.svg",
+      "originalSourceUrl": null,
+      "sourceName": "Original artwork created for Velour",
+      "licenseType": "Project license (original work)",
+      "dateAcquired": "2026-08-06",
+      "commercialUseStatus": "Permitted (original work).",
+      "attributionRequirement": "None."
+    }
+  ]
+}
