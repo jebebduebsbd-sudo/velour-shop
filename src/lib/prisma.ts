@@ -12,8 +12,25 @@ function createClient(): PrismaClient {
   return new PrismaClient({ adapter });
 }
 
-export const prisma = globalForPrisma.prisma ?? createClient();
-
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
+function client(): PrismaClient {
+  const existing = globalForPrisma.prisma;
+  if (existing) return existing;
+  const created = createClient();
+  // Reuse across dev hot reloads; in production each instance is long-lived.
+  globalForPrisma.prisma = created;
+  return created;
 }
+
+/**
+ * Lazily-connected Prisma client.
+ *
+ * Construction is deferred to first use so importing this module never reads
+ * the environment. That keeps `next build` (which evaluates modules without
+ * runtime secrets) working while still failing closed on a real request.
+ */
+export const prisma = new Proxy({} as PrismaClient, {
+  get(_target, property, receiver) {
+    const value = Reflect.get(client(), property, receiver);
+    return typeof value === "function" ? value.bind(client()) : value;
+  },
+});

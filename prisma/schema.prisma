@@ -7,6 +7,103 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  CUSTOMER
+  SUPPORT
+  ADMIN
+}
+
+enum EmailTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+model User {
+  id               String       @id @default(cuid())
+  email            String       @unique
+  username         String       @unique
+  /// Argon2id hash (or documented scrypt fallback). Never returned to clients.
+  passwordHash     String
+  role             Role         @default(CUSTOMER)
+  emailVerifiedAt  DateTime?
+  /// Set when the account is locked by an admin or by repeated failed logins.
+  lockedUntil      DateTime?
+  disabledAt       DateTime?
+  failedLoginCount Int          @default(0)
+  lastLoginAt      DateTime?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  sessions         Session[]
+  emailTokens      EmailToken[]
+  auditEvents      AuditEvent[]
+
+  @@index([role])
+}
+
+model Session {
+  id             String    @id @default(cuid())
+  /// SHA-256 of the opaque session token. The raw token exists only in the
+  /// httpOnly cookie and is never stored or logged.
+  tokenHash      String    @unique
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  /// Timestamp of the last successful password confirmation, used to gate
+  /// sensitive actions such as revealing a deliverable (step-up auth).
+  reauthAt       DateTime?
+  lastSeenAt     DateTime  @default(now())
+  ipHash         String?
+  userAgentBrief String?
+  createdAt      DateTime  @default(now())
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+}
+
+model EmailToken {
+  id        String            @id @default(cuid())
+  /// Peppered SHA-256 of the token. Raw tokens are only ever emailed.
+  tokenHash String            @unique
+  purpose   EmailTokenPurpose
+  userId    String
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([userId, purpose])
+}
+
+/// Append-only audit trail. Rows are never updated or deleted, and must never
+/// contain passwords, tokens, API keys, deliverable values, or card data.
+model AuditEvent {
+  id         String   @id @default(cuid())
+  action     String
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Type + id of the affected record, when applicable.
+  targetType String?
+  targetId   String?
+  /// Non-sensitive structured context (reasons, counts, outcome codes).
+  metadata   Json?
+  ipHash     String?
+  createdAt  DateTime @default(now())
+
+  @@index([action, createdAt])
+  @@index([userId, createdAt])
+}
+
+/// Fixed-window rate limit counters keyed by action + subject hash.
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+
+  @@index([windowStart])
+}
+
 enum ProductStatus {
   DRAFT
   ACTIVE

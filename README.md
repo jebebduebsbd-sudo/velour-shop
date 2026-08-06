@@ -20,7 +20,7 @@ a server-only provider interface, be disabled by default, and fail closed.
 
 ## Current status
 
-Phases 1–5 of the build plan are implemented:
+Phases 1–6 of the build plan are implemented:
 
 - Velour branding and design-token system (CSS variables + Tailwind 4)
 - Shared public shell (header, footer, mobile navigation, wallet chip)
@@ -29,13 +29,33 @@ Phases 1–5 of the build plan are implemented:
 - Custom accessible category combobox (searchable, keyboard navigable)
 - Market and product pages (initial versions; filters arrive later)
 - Buyer Protection policy page rendered from structured content data
-- Dedicated sign-in / sign-up / forgot-password pages with validated
-  server actions (session creation ships with the authentication phase)
-- PostgreSQL catalog schema (Category, Product, InventoryUnit) with
-  encrypted-at-rest demo inventory payloads
+- Dedicated sign-in / sign-up / forgot-password / reset-password /
+  verify-email pages
+- Working authentication: registration, login, logout, email verification,
+  password reset, password change, session revocation, account lockout,
+  Argon2id hashing, database-backed opaque sessions, secure cookies,
+  origin/CSRF checks, rate limiting, immutable audit trail
+- Authenticated customer shell with sidebar: dashboard, profile, security
+- Security headers via `proxy.ts` (CSP with per-request nonce, HSTS,
+  Referrer-Policy, Permissions-Policy, frame-ancestors, cache controls)
+- PostgreSQL schema (accounts, sessions, email tokens, audit events, rate
+  limits, catalog) with encrypted-at-rest demo inventory payloads
 
-Not yet implemented (later phases): authentication/sessions, wallet ledger,
-top-ups, checkout, orders, refunds/disputes, admin, Railway deployment.
+Not yet implemented (later phases): wallet ledger, top-ups, checkout,
+orders, refunds/disputes, admin interfaces, Railway deployment. Sidebar
+entries for those areas are present but their pages arrive with the
+corresponding phase.
+
+### Demo accounts (development seed only)
+
+| Email | Username | Role | State |
+| --- | --- | --- | --- |
+| `demo@velour.shop` | `demo` | CUSTOMER | verified |
+| `unverified@velour.shop` | `newcomer` | CUSTOMER | unverified |
+| `admin@velour.shop` | `admin` | ADMIN | verified |
+
+Password for all three: `velour-demo-2026`. These are never created when
+`NODE_ENV=production`.
 
 ## Requirements
 
@@ -70,14 +90,20 @@ npm run dev
 All variables are server-side; none use `NEXT_PUBLIC_`. Validated at
 startup by `src/lib/env.ts` (Zod).
 
-| Variable | Purpose |
-| --- | --- |
-| `DATABASE_URL` | PostgreSQL connection string |
-| `APP_ORIGIN` | Canonical origin, e.g. `https://velour.shop` |
-| `DELIVERY_MASTER_KEY_B64` | 32-byte base64 master key for deliverable encryption (kept outside the DB) |
+| Variable | Required | Purpose |
+| --- | --- | --- |
+| `DATABASE_URL` | always | PostgreSQL connection string |
+| `APP_ORIGIN` | always | Canonical origin, e.g. `https://velour.shop` |
+| `SESSION_SECRET` | production | Derives session/IP hashing keys (min 32 chars) |
+| `EMAIL_TOKEN_PEPPER` | production | Pepper for email token hashes (min 16 chars) |
+| `DELIVERY_MASTER_KEY_B64` | seeding/delivery | 32-byte base64 key for deliverable encryption (kept outside the DB) |
 
-Never commit real values. `.env` is gitignored; `.env.example` documents
-placeholders only.
+Production startup rejects missing `SESSION_SECRET` or `EMAIL_TOKEN_PEPPER`;
+development falls back to clearly-marked local values. Never commit real
+values. `.env` is gitignored; `.env.example` documents placeholders only.
+
+`npm run build` does not require runtime secrets — the Prisma client and env
+access are lazy, so builds work in CI without production configuration.
 
 ## Scripts
 
@@ -96,15 +122,39 @@ placeholders only.
 
 ## Testing
 
-`npm test` runs unit and component tests (Vitest + Testing Library):
-deliverable encryption round-trips and fail-closed behavior, delivery-label
-policy ("Instant delivery" never shown without stock), Buyer Protection
-content completeness and banned-promise checks, category combobox keyboard
-interaction, dedicated auth page rendering, server-action validation, and
-environment validation.
+`npm test` runs unit, component, and integration tests (Vitest + Testing
+Library). Integration tests need a PostgreSQL database — by default
+`velour_test` on the local server:
+
+```bash
+sudo -u postgres createdb -O velour velour_test
+DATABASE_URL="postgresql://velour:velour_dev@localhost:5432/velour_test" npx prisma migrate deploy
+npm test
+```
+
+Override the target with `TEST_DATABASE_URL`. Coverage includes: password
+hashing (Argon2id/scrypt, salting, no plaintext), token hashing and peppering,
+single-use email tokens (including concurrent redemption), password reset
+revoking all sessions, account lockout and counter reset, account-enumeration
+resistance, origin/CSRF verification, RBAC role hierarchy, audit metadata
+sanitization, deliverable encryption fail-closed behavior, delivery-label
+policy, Buyer Protection content rules, and category combobox keyboard
+interaction.
 
 ## Security notes
 
+- Passwords: Argon2id (19 MiB, t=2, p=1) with a documented scrypt fallback
+  (N=2^15, r=8, p=1). Hashes are never returned to clients; passwords are
+  never logged.
+- Sessions: opaque 32-byte tokens, stored only as SHA-256 hashes, delivered in
+  httpOnly + SameSite=Lax cookies (Secure in production), rotated on password
+  change, revocable individually and in bulk. Nothing sensitive is kept in
+  `localStorage`.
+- Email tokens are single-use, peppered, expiring, and purpose-scoped.
+- Mutating server actions verify request origin, validate with Zod, and are
+  rate-limited by hashed client IP; errors are normalized with no stack traces.
+- Audit events are append-only and sanitized: any key resembling a password,
+  token, key, cookie, or deliverable is dropped before the write.
 - Money is integer minor units only; never floating point.
 - Inventory deliverables are encrypted at rest (AES-256-GCM, HKDF-derived
   keys); the master key lives in the environment, never the database.

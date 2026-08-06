@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { LayoutDashboard, Search } from "lucide-react";
 import Link from "next/link";
 
 import { VelourLogo } from "@/components/brand/logo";
@@ -14,9 +14,11 @@ import { WalletChip } from "@/components/wallet/wallet-chip";
 export function SiteHeader({
   categories,
   totalUnits,
+  username,
 }: {
   categories: ComboboxCategory[];
   totalUnits: number;
+  username?: string | null;
 }) {
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-overlay backdrop-blur-md">
@@ -58,21 +60,38 @@ export function SiteHeader({
           <CategoryCombobox categories={categories} totalUnits={totalUnits} />
         </div>
 
-        <WalletChip />
+        <WalletChip
+          addFundsHref={username ? "/wallet/top-up" : "/auth/sign-in"}
+        />
 
         <div className="hidden items-center gap-2 lg:flex">
-          <Link
-            href="/auth/sign-in"
-            className={buttonClasses("secondary", "md")}
-          >
-            Sign in
-          </Link>
-          <Link href="/auth/sign-up" className={buttonClasses("primary", "md")}>
-            Sign up
-          </Link>
+          {username ? (
+            <Link
+              href="/dashboard"
+              className={buttonClasses("secondary", "md")}
+            >
+              <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+              {username}
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/auth/sign-in"
+                className={buttonClasses("secondary", "md")}
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/auth/sign-up"
+                className={buttonClasses("primary", "md")}
+              >
+                Sign up
+              </Link>
+            </>
+          )}
         </div>
 
-        <MobileNav categories={categories} />
+        <MobileNav categories={categories} signedIn={Boolean(username)} />
       </div>
     </header>
   );

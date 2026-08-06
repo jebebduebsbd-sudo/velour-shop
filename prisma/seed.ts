@@ -4,6 +4,7 @@ import { randomBytes } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 
 import { PrismaClient } from "../src/generated/prisma/client";
+import { hashPassword } from "../src/lib/auth/password";
 import {
   encryptDeliverable,
   fingerprintDeliverable,
@@ -287,6 +288,7 @@ function demoCode(): string {
 }
 
 async function main() {
+  // Catalog data is replaced wholesale; accounts are upserted, never dropped.
   await prisma.inventoryUnit.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
@@ -342,8 +344,63 @@ async function main() {
     }
   }
 
+  await seedDemoAccounts();
+
   console.log(
     `Seeded ${CATEGORY_DEFS.length} categories, ${productCount} products, ${unitCount} inventory units.`,
+  );
+}
+
+/**
+ * Local demo accounts. The password is a well-known development value and is
+ * only created outside production.
+ */
+async function seedDemoAccounts() {
+  if (process.env.NODE_ENV === "production") {
+    console.log("Skipping demo accounts (NODE_ENV=production).");
+    return;
+  }
+  const passwordHash = await hashPassword("velour-demo-2026");
+  const accounts = [
+    {
+      email: "demo@velour.shop",
+      username: "demo",
+      role: "CUSTOMER" as const,
+      verified: true,
+    },
+    {
+      email: "unverified@velour.shop",
+      username: "newcomer",
+      role: "CUSTOMER" as const,
+      verified: false,
+    },
+    {
+      email: "admin@velour.shop",
+      username: "admin",
+      role: "ADMIN" as const,
+      verified: true,
+    },
+  ];
+
+  for (const account of accounts) {
+    await prisma.user.upsert({
+      where: { email: account.email },
+      update: {
+        passwordHash,
+        role: account.role,
+        emailVerifiedAt: account.verified ? new Date() : null,
+      },
+      create: {
+        email: account.email,
+        username: account.username,
+        passwordHash,
+        role: account.role,
+        emailVerifiedAt: account.verified ? new Date() : null,
+      },
+    });
+  }
+  console.log(
+    `Seeded ${accounts.length} demo accounts (password: velour-demo-2026).`,
   );
 }
 

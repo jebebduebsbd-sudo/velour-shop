@@ -8,13 +8,16 @@ export const metadata: Metadata = {
   description: "Sign in to your Velour account.",
 };
 
-export default function SignInPage() {
+export default async function SignInPage(props: PageProps<"/auth/sign-in">) {
+  const params = await props.searchParams;
+  const next = typeof params.next === "string" ? params.next : undefined;
+
   return (
     <AuthShell headline="Welcome back.">
       <h1 className="text-2xl font-bold text-ink">Sign in</h1>
       <div className="mt-5 space-y-5">
         <AuthTabs active="sign-in" />
-        <SignInForm />
+        <SignInForm next={next} />
       </div>
     </AuthShell>
   );

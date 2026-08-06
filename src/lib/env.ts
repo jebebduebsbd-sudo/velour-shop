@@ -14,6 +14,13 @@ const serverEnvSchema = z.object({
   DATABASE_URL: z.string().url(),
   APP_ORIGIN: z.string().url().default("http://localhost:3000"),
   /**
+   * Secret used to derive session/IP hashing keys. Required in production;
+   * development falls back to a clearly-marked local value.
+   */
+  SESSION_SECRET: z.string().min(32).optional(),
+  /** Pepper mixed into email token hashes. Required in production. */
+  EMAIL_TOKEN_PEPPER: z.string().min(16).optional(),
+  /**
    * 32-byte base64 master key for deliverable encryption. Optional until the
    * delivery phase, but validated for shape whenever present.
    */
@@ -45,7 +52,39 @@ export function serverEnv(): ServerEnv {
         .join("; ");
       throw new Error(`Invalid server environment: ${issues}`);
     }
+    if (parsed.data.NODE_ENV === "production") {
+      const missing = (
+        ["SESSION_SECRET", "EMAIL_TOKEN_PEPPER"] as const
+      ).filter((key) => !parsed.data[key]);
+      if (missing.length > 0) {
+        throw new Error(
+          `Invalid server environment: ${missing.join(", ")} ${
+            missing.length === 1 ? "is" : "are"
+          } required in production`,
+        );
+      }
+    }
     cached = parsed.data;
   }
   return cached;
+}
+
+/**
+ * Development-only fallbacks so a fresh clone runs without configuration.
+ * Production startup rejects missing secrets (see serverEnv above).
+ */
+const DEV_SESSION_SECRET =
+  "velour-development-session-secret-not-for-production";
+const DEV_EMAIL_TOKEN_PEPPER = "velour-development-email-pepper";
+
+export function sessionSecret(): string {
+  return serverEnv().SESSION_SECRET ?? DEV_SESSION_SECRET;
+}
+
+export function emailTokenPepper(): string {
+  return serverEnv().EMAIL_TOKEN_PEPPER ?? DEV_EMAIL_TOKEN_PEPPER;
+}
+
+export function isProduction(): boolean {
+  return serverEnv().NODE_ENV === "production";
 }

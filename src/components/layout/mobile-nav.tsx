@@ -14,8 +14,10 @@ import type { ComboboxCategory } from "@/components/category/category-combobox";
  */
 export function MobileNav({
   categories,
+  signedIn = false,
 }: {
   categories: ComboboxCategory[];
+  signedIn?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -79,16 +81,26 @@ export function MobileNav({
               label="Buyer protection"
               pathname={pathname}
             />
-            <MobileLink
-              href="/auth/sign-in"
-              label="Sign in"
-              pathname={pathname}
-            />
-            <MobileLink
-              href="/auth/sign-up"
-              label="Sign up"
-              pathname={pathname}
-            />
+            {signedIn ? (
+              <MobileLink
+                href="/dashboard"
+                label="Dashboard"
+                pathname={pathname}
+              />
+            ) : (
+              <>
+                <MobileLink
+                  href="/auth/sign-in"
+                  label="Sign in"
+                  pathname={pathname}
+                />
+                <MobileLink
+                  href="/auth/sign-up"
+                  label="Sign up"
+                  pathname={pathname}
+                />
+              </>
+            )}
           </nav>
           <p className="px-2 pt-3 pb-1 text-[0.65rem] font-semibold tracking-[0.18em] text-ink-faint uppercase">
             Categories

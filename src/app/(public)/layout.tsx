@@ -1,6 +1,7 @@
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { ComboboxCategory } from "@/components/category/category-combobox";
+import { getActiveSession } from "@/lib/auth/session";
 import { getCategorySummaries } from "@/lib/catalog";
 import { CATEGORY_DEFS } from "@/lib/categories";
 
@@ -33,7 +34,10 @@ async function getHeaderData(): Promise<{
 export default async function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const { categories, totalUnits } = await getHeaderData();
+  const [{ categories, totalUnits }, session] = await Promise.all([
+    getHeaderData(),
+    getActiveSession().catch(() => null),
+  ]);
   return (
     <div className="flex min-h-dvh flex-col">
       <a
@@ -42,7 +46,11 @@ export default async function PublicLayout({
       >
         Skip to content
       </a>
-      <SiteHeader categories={categories} totalUnits={totalUnits} />
+      <SiteHeader
+        categories={categories}
+        totalUnits={totalUnits}
+        username={session?.user.username}
+      />
       <main id="main-content" className="flex-1">
         {children}
       </main>

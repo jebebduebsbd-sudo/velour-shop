@@ -11,7 +11,7 @@ import { Field } from "@/components/ui/field";
 
 const initialState: AuthFormState = { status: "idle" };
 
-export function SignInForm() {
+export function SignInForm({ next }: { next?: string }) {
   const [state, formAction, pending] = useActionState(
     signInAction,
     initialState,
@@ -20,6 +20,7 @@ export function SignInForm() {
   return (
     <form action={formAction} noValidate className="space-y-4">
       <FormMessage state={state} />
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <Field
         label="Username or email"
         name="identifier"

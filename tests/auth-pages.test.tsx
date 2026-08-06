@@ -9,9 +9,16 @@ import ForgotPasswordPage from "@/app/(public)/auth/forgot-password/page";
 import SignInPage from "@/app/(public)/auth/sign-in/page";
 import SignUpPage from "@/app/(public)/auth/sign-up/page";
 
+/** Async server components are awaited, then their JSX is rendered. */
+async function renderSignIn() {
+  return render(
+    await SignInPage({ params: Promise.resolve({}), searchParams: Promise.resolve({}) }),
+  );
+}
+
 describe("dedicated sign-in page", () => {
-  it("renders a full page with form fields, tabs, and a forgot-password link", () => {
-    render(<SignInPage />);
+  it("renders a full page with form fields, tabs, and a forgot-password link", async () => {
+    await renderSignIn();
     expect(
       screen.getByRole("heading", { level: 1, name: /sign in/i }),
     ).toBeInTheDocument();
@@ -31,7 +38,7 @@ describe("dedicated sign-in page", () => {
 
   it("has a working password visibility toggle", async () => {
     const user = userEvent.setup();
-    render(<SignInPage />);
+    await renderSignIn();
     const password = screen.getByLabelText("Password");
     expect(password).toHaveAttribute("type", "password");
     await user.click(screen.getByRole("button", { name: /show password/i }));
