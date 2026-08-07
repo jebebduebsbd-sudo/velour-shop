@@ -45,12 +45,19 @@ Storefront, authentication, and the wallet ledger are implemented:
   DSK / NOWPayments / OVGC adapters scaffolded but disabled and fail-closed
 - Wallet top-up flow with webhook-only crediting (HMAC-verified, replay-safe),
   transactions page with filters/pagination, owner-scoped CSV export
+- Wallet-only checkout for authorized codes: atomic single-unit reservation
+  (`FOR UPDATE SKIP LOCKED`, no oversell), server-side price/balance checks,
+  idempotent one-order-one-debit, order state machine, verified-email gate
+- Encrypted delivery: owner-only reveal gated on a fulfilled order + step-up
+  password re-auth; deliverable masked by default and never written to logs
+- Purchases list + order detail pages; catalog priced in EUR to match the
+  wallet
 - PostgreSQL schema (accounts, sessions, email tokens, audit events, rate
   limits, catalog, ledger, top-ups, webhook events) with encrypted-at-rest
   demo inventory payloads
 
-Not yet implemented (later phases): wallet-only checkout/orders, refunds and
-disputes, the affiliate platform, reviews, Fortnite gifting fulfillment,
+Not yet implemented (later phases): refunds and disputes, the affiliate
+platform, reviews/vouches (real, order-gated), Fortnite gifting fulfillment,
 admin interfaces, Bulgarian localization, and Railway deployment. Some sidebar
 entries point to pages that arrive with the corresponding phase.
 
