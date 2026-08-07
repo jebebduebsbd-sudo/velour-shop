@@ -24,6 +24,8 @@ export const AUDIT_ACTIONS = {
   walletDebit: "wallet.debit",
   walletRefund: "wallet.refund",
   adminAdjustment: "wallet.admin_adjustment",
+  orderCreated: "order.created",
+  deliveryReveal: "order.delivery.revealed",
 } as const;
 
 export type AuditAction =

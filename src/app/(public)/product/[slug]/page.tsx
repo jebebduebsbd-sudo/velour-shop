@@ -1,22 +1,16 @@
-import {
-  ChevronRight,
-  PackageCheck,
-  ShieldCheck,
-  Wallet,
-  Zap,
-} from "lucide-react";
+import { ChevronRight, PackageCheck, ShieldCheck } from "lucide-react";
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { randomUUID } from "node:crypto";
 
 import { PlatformMark, PlatformTile } from "@/components/icons/platform-mark";
 import { ProductCard } from "@/components/market/product-card";
-import { StockBadge } from "@/components/market/stock-badge";
-import { buttonClasses } from "@/components/ui/button";
+import { PurchasePanel } from "@/components/product/purchase-panel";
 import { Panel } from "@/components/ui/panel";
+import { getActiveSession } from "@/lib/auth/session";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog";
-import { deliveryLabel } from "@/lib/delivery";
-import { formatCount, formatMinor } from "@/lib/format";
+import { getWalletBalance } from "@/lib/wallet/ledger";
 
 export async function generateMetadata(
   props: PageProps<"/product/[slug]">,
@@ -29,6 +23,9 @@ export async function generateMetadata(
 
 export default async function ProductPage(props: PageProps<"/product/[slug]">) {
   const { slug } = await props.params;
+  const searchParams = await props.searchParams;
+  const error =
+    typeof searchParams.error === "string" ? searchParams.error : undefined;
   const product = await getProductBySlug(slug).catch(() => null);
   if (!product) notFound();
 
@@ -36,7 +33,24 @@ export default async function ProductPage(props: PageProps<"/product/[slug]">) {
     product.categorySlug,
     product.id,
   ).catch(() => []);
-  const inStock = product.availableUnits > 0;
+
+  const session = await getActiveSession().catch(() => null);
+  let viewer:
+    | { state: "guest" }
+    | { state: "unverified" }
+    | { state: "ready"; balanceMinor: number; currency: string };
+  if (!session) {
+    viewer = { state: "guest" };
+  } else if (session.user.emailVerifiedAt === null) {
+    viewer = { state: "unverified" };
+  } else {
+    const balance = await getWalletBalance(session.user.id).catch(() => null);
+    viewer = {
+      state: "ready",
+      balanceMinor: balance?.spendableMinor ?? 0,
+      currency: balance?.currency ?? product.currency,
+    };
+  }
 
   return (
     <div className="mx-auto max-w-7xl space-y-10 px-4 py-10 sm:px-6">
@@ -140,65 +154,18 @@ export default async function ProductPage(props: PageProps<"/product/[slug]">) {
         </div>
 
         <aside aria-label="Purchase" className="lg:sticky lg:top-24 lg:self-start">
-          <Panel className="p-6">
-            <div className="flex items-baseline justify-between gap-3">
-              <span className="text-3xl font-bold text-ink">
-                {formatMinor(product.priceMinor, product.currency)}
-              </span>
-              <StockBadge availableUnits={product.availableUnits} />
-            </div>
-            <dl className="mt-5 space-y-3 border-t border-line pt-5 text-sm">
-              <div className="flex items-center justify-between">
-                <dt className="text-ink-faint">Delivery</dt>
-                <dd className="flex items-center gap-1.5 text-ink">
-                  <Zap
-                    className={`h-3.5 w-3.5 ${inStock ? "text-accent" : "text-ink-faint"}`}
-                    aria-hidden="true"
-                  />
-                  {deliveryLabel(product)}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-ink-faint">Region</dt>
-                <dd className="text-ink">{product.region}</dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-ink-faint">Stock</dt>
-                <dd className="text-ink">
-                  {inStock
-                    ? `${formatCount(product.availableUnits)} units`
-                    : "None available"}
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="text-ink-faint">Payment</dt>
-                <dd className="flex items-center gap-1.5 text-ink">
-                  <Wallet className="h-3.5 w-3.5 text-orchid" aria-hidden="true" />
-                  Wallet balance only
-                </dd>
-              </div>
-            </dl>
-            {inStock ? (
-              <Link
-                href="/auth/sign-in"
-                className={buttonClasses("primary", "lg", "mt-6 w-full")}
-              >
-                Sign in to purchase
-              </Link>
-            ) : (
-              <button
-                type="button"
-                disabled
-                className={buttonClasses("secondary", "lg", "mt-6 w-full")}
-              >
-                Out of stock
-              </button>
-            )}
-            <p className="mt-3 text-center text-xs text-ink-faint">
-              Your wallet balance is checked at checkout — prices are always
-              confirmed server-side.
-            </p>
-          </Panel>
+          <PurchasePanel
+            slug={product.slug}
+            priceMinor={product.priceMinor}
+            currency={product.currency}
+            region={product.region}
+            delivery={product.delivery}
+            availableUnits={product.availableUnits}
+            warranty={product.warranty}
+            idempotencyKey={randomUUID()}
+            viewer={viewer}
+            error={error}
+          />
         </aside>
       </div>
 

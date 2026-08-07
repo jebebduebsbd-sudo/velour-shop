@@ -54,11 +54,24 @@ export async function ensureAccount(
     select: { id: true },
   });
   if (existing) return existing.id;
-  const created = await db.ledgerAccount.create({
-    data: { kind, userId, currency },
-    select: { id: true },
-  });
-  return created.id;
+  try {
+    const created = await db.ledgerAccount.create({
+      data: { kind, userId, currency },
+      select: { id: true },
+    });
+    return created.id;
+  } catch (error) {
+    // Concurrent first-use of the same (esp. house) account: the loser of the
+    // unique-constraint race re-reads the winner's row.
+    if (isUniqueViolation(error)) {
+      const row = await db.ledgerAccount.findFirst({
+        where: { kind, userId, currency },
+        select: { id: true },
+      });
+      if (row) return row.id;
+    }
+    throw error;
+  }
 }
 
 /**
@@ -201,20 +214,118 @@ export async function creditTopUp(input: {
     throw new Error("Top-up amount must be a positive integer minor amount");
   }
   const currency = input.currency ?? DEFAULT_CURRENCY;
-  return prisma.$transaction(async (tx) => {
-    const userCash = await ensureAccount(tx, "USER_CASH", input.userId, currency);
-    const houseFunding = await ensureAccount(tx, "HOUSE_FUNDING", null, currency);
-    return postTransaction(tx, {
-      type: "TOP_UP",
-      description: input.description,
-      currency,
-      idempotencyKey: input.idempotencyKey,
-      metadata: input.metadata,
-      postings: [
-        { accountId: userCash, amount: input.amountMinor },
-        { accountId: houseFunding, amount: -input.amountMinor },
-      ],
-    });
+  // Resolve (create if needed) accounts BEFORE posting. Account creation is
+  // race-safe only outside a transaction — a P2002 inside a transaction aborts
+  // it. postTransaction is a single atomic create, so no wrapper is needed.
+  const [userCash, houseFunding] = await Promise.all([
+    ensureAccount(prisma, "USER_CASH", input.userId, currency),
+    ensureAccount(prisma, "HOUSE_FUNDING", null, currency),
+  ]);
+  return postTransaction(prisma, {
+    type: "TOP_UP",
+    description: input.description,
+    currency,
+    idempotencyKey: input.idempotencyKey,
+    metadata: input.metadata,
+    postings: [
+      { accountId: userCash, amount: input.amountMinor },
+      { accountId: houseFunding, amount: -input.amountMinor },
+    ],
+  });
+}
+
+export type UserSpendableAccounts = {
+  cashAccountId: string;
+  promoAccountId: string;
+};
+
+/**
+ * Resolves (creating if necessary) a user's spendable accounts. Must be called
+ * OUTSIDE a transaction so the create race can self-heal.
+ */
+export async function resolveUserSpendableAccounts(
+  userId: string,
+  currency = DEFAULT_CURRENCY,
+): Promise<UserSpendableAccounts> {
+  const [cashAccountId, promoAccountId] = await Promise.all([
+    ensureAccount(prisma, "USER_CASH", userId, currency),
+    ensureAccount(prisma, "USER_PROMO", userId, currency),
+  ]);
+  return { cashAccountId, promoAccountId };
+}
+
+export function resolveHouseAccount(
+  kind: LedgerAccountKind,
+  currency = DEFAULT_CURRENCY,
+): Promise<string> {
+  return ensureAccount(prisma, kind, null, currency);
+}
+
+/**
+ * Locks the given account rows FOR UPDATE inside a transaction and returns
+ * their balances. Serializing on these rows prevents a user from
+ * double-spending across concurrent checkouts.
+ */
+export async function lockAndReadBalances(
+  tx: Prisma.TransactionClient,
+  cashAccountId: string,
+  promoAccountId: string,
+): Promise<{ cashMinor: number; promoMinor: number }> {
+  await tx.$queryRaw`
+    SELECT id FROM "LedgerAccount"
+    WHERE id IN (${cashAccountId}, ${promoAccountId})
+    FOR UPDATE
+  `;
+  const [cashMinor, promoMinor] = await Promise.all([
+    accountBalance(tx, cashAccountId),
+    accountBalance(tx, promoAccountId),
+  ]);
+  return { cashMinor, promoMinor };
+}
+
+/**
+ * Posts a purchase debit inside an existing transaction using pre-resolved
+ * account ids (no account creation here). Spends cash first, then promotional
+ * balance for any remainder, balanced against house revenue.
+ */
+export async function postPurchaseDebit(
+  tx: Prisma.TransactionClient,
+  input: {
+    priceMinor: number;
+    currency?: string;
+    idempotencyKey: string;
+    description: string;
+    cashAccountId: string;
+    promoAccountId: string;
+    houseRevenueAccountId: string;
+    cashMinor: number;
+    promoMinor: number;
+    metadata?: Prisma.InputJsonValue;
+  },
+): Promise<{ transactionId: string; applied: boolean }> {
+  const currency = input.currency ?? DEFAULT_CURRENCY;
+  const cashPortion = Math.min(input.priceMinor, Math.max(input.cashMinor, 0));
+  const promoPortion = input.priceMinor - cashPortion;
+  if (promoPortion > Math.max(input.promoMinor, 0)) {
+    throw new Error("Insufficient balance for purchase");
+  }
+
+  const postings: PostingInput[] = [
+    { accountId: input.houseRevenueAccountId, amount: input.priceMinor },
+  ];
+  if (cashPortion > 0) {
+    postings.push({ accountId: input.cashAccountId, amount: -cashPortion });
+  }
+  if (promoPortion > 0) {
+    postings.push({ accountId: input.promoAccountId, amount: -promoPortion });
+  }
+  return postTransaction(tx, {
+    type: "PURCHASE",
+    description: input.description,
+    currency,
+    idempotencyKey: input.idempotencyKey,
+    metadata: input.metadata,
+    postings,
   });
 }
 
@@ -234,19 +345,19 @@ export async function creditPromo(input: {
     throw new Error("Promo amount must be a positive integer minor amount");
   }
   const currency = input.currency ?? DEFAULT_CURRENCY;
-  return prisma.$transaction(async (tx) => {
-    const userPromo = await ensureAccount(tx, "USER_PROMO", input.userId, currency);
-    const housePromo = await ensureAccount(tx, "HOUSE_PROMO", null, currency);
-    return postTransaction(tx, {
-      type: "PROMO_CREDIT",
-      description: input.description,
-      currency,
-      idempotencyKey: input.idempotencyKey,
-      metadata: input.metadata,
-      postings: [
-        { accountId: userPromo, amount: input.amountMinor },
-        { accountId: housePromo, amount: -input.amountMinor },
-      ],
-    });
+  const [userPromo, housePromo] = await Promise.all([
+    ensureAccount(prisma, "USER_PROMO", input.userId, currency),
+    ensureAccount(prisma, "HOUSE_PROMO", null, currency),
+  ]);
+  return postTransaction(prisma, {
+    type: "PROMO_CREDIT",
+    description: input.description,
+    currency,
+    idempotencyKey: input.idempotencyKey,
+    metadata: input.metadata,
+    postings: [
+      { accountId: userPromo, amount: input.amountMinor },
+      { accountId: housePromo, amount: -input.amountMinor },
+    ],
   });
 }

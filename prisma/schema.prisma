@@ -38,6 +38,7 @@ model User {
   auditEvents      AuditEvent[]
   ledgerAccounts   LedgerAccount[]
   walletTopUps     WalletTopUp[]
+  orders           Order[]
 
   @@index([role])
 }
@@ -279,6 +280,7 @@ model Product {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   units       InventoryUnit[]
+  orders      Order[]
 
   @@index([categoryId, status])
   @@index([featured, status])
@@ -298,6 +300,60 @@ model InventoryUnit {
   soldAt             DateTime?
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
+  order              Order?
 
   @@index([productId, status])
+}
+
+enum OrderStatus {
+  DRAFT
+  FUNDS_HELD
+  PAID
+  FULFILLMENT_PENDING
+  FULFILLED
+  CANCELLED
+  FAILED
+  REFUND_REQUESTED
+  REFUNDED
+  DISPUTED
+}
+
+model Order {
+  id              String        @id @default(cuid())
+  userId          String
+  user            User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId       String
+  product         Product       @relation(fields: [productId], references: [id])
+  /// The single reserved/sold unit backing this order (instant-code model).
+  inventoryUnitId String?       @unique
+  inventoryUnit   InventoryUnit? @relation(fields: [inventoryUnitId], references: [id])
+  status          OrderStatus   @default(DRAFT)
+  /// Price charged, integer minor units; looked up server-side at purchase.
+  priceMinor      Int
+  currency        String        @default("EUR")
+  /// Snapshot of what was purchased (title shown in history without a join).
+  productTitle    String
+  /// Ledger transaction for the purchase debit.
+  ledgerTxnId     String?       @unique
+  /// Client idempotency key: one order + one debit per key.
+  idempotencyKey  String        @unique
+  /// Timestamp of the first successful deliverable reveal (for warranty).
+  firstRevealedAt DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  events          OrderEvent[]
+
+  @@index([userId, createdAt])
+  @@index([status])
+}
+
+model OrderEvent {
+  id        String      @id @default(cuid())
+  orderId   String
+  order     Order       @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  status    OrderStatus
+  note      String?
+  createdAt DateTime    @default(now())
+
+  @@index([orderId, createdAt])
 }
