@@ -213,7 +213,60 @@ visuals are original code-drawn SVG/CSS. Nothing is hotlinked.
 
 Regenerate with: `node scripts/generate-platform-marks.mjs`.
 
-## Deployment
+## Deployment (Railway)
 
-Railway deployment (railway.json, health endpoint, migration pre-deploy)
-arrives with a later phase alongside the transactional backend.
+The repo ships a `railway.json` that builds with Nixpacks, runs
+`npx prisma migrate deploy` as a pre-deploy step, starts with `npm run start`,
+and health-checks `/api/health` (which pings the database). Node is pinned to
+`>=20.9` via `engines` and `.nvmrc`.
+
+### Steps
+
+1. Create a Railway project and add a **PostgreSQL** database plugin. Railway
+   exposes its connection string as `DATABASE_URL`.
+2. Add a service from this GitHub repo (branch of your choice). Railway detects
+   `railway.json` automatically.
+3. Set the service variables (see the table below). At minimum you need
+   `DATABASE_URL` (from the DB plugin — reference it as `${{Postgres.DATABASE_URL}}`),
+   `APP_ORIGIN`, `SESSION_SECRET`, `EMAIL_TOKEN_PEPPER`, and
+   `DELIVERY_MASTER_KEY_B64`.
+4. Deploy. The pre-deploy step applies migrations; the release then starts and
+   must pass `/api/health` before receiving traffic.
+5. (Optional, once) open a Railway shell / one-off command and run
+   `npx prisma db seed` if you want the demo catalog. Do **not** seed a real
+   production catalog — add real, documented inventory instead.
+
+### Environment variables on Railway
+
+| Variable | Required | Notes |
+| --- | --- | --- |
+| `DATABASE_URL` | yes | From the Postgres plugin: `${{Postgres.DATABASE_URL}}` |
+| `APP_ORIGIN` | yes | Public URL of the service, e.g. `https://velour.shop` (used for origin/CSRF checks) |
+| `SESSION_SECRET` | yes (prod) | `openssl rand -base64 48` |
+| `EMAIL_TOKEN_PEPPER` | yes (prod) | `openssl rand -base64 32` |
+| `DELIVERY_MASTER_KEY_B64` | yes | 32-byte base64: `openssl rand -base64 32`. Store as a Railway secret; keep it out of the DB and out of logs |
+| `PAYMENT_WEBHOOK_SECRET` | for payments | `openssl rand -base64 24`; verifies provider webhooks |
+| `NODE_ENV` | auto | Railway sets `production`; do not override |
+| `PORT` | auto | Railway sets this; `next start` respects it |
+| `PAYMENT_DSK_ENABLED` | optional | Leave `false` until the DSK adapter is implemented and onboarded |
+| `PAYMENT_NOWPAYMENTS_ENABLED` | optional | Leave `false` until NOWPayments is implemented and onboarded |
+| `PAYMENT_OVGC_ENABLED` | optional | Leave `false` (voucher funding not enabled) |
+
+In production the app **fails to start** if `SESSION_SECRET` or
+`EMAIL_TOKEN_PEPPER` are missing — that is intentional. Never set any of these
+with a `NEXT_PUBLIC_` prefix; they are server-only.
+
+### Optional Redis
+
+A background worker / Redis is not required for the current feature set. When
+the async-fulfillment and rate-limit-at-scale phases land, add a Railway Redis
+plugin and a `REDIS_URL` variable; until then the DB-backed rate limiter is
+sufficient.
+
+### Notes
+
+- The build runs `prisma generate` automatically via the `postinstall` script,
+  so `npm ci` on Railway produces the client before `next build`.
+- `next build` does not need runtime secrets; they are only required at
+  runtime, so builds succeed even before you set them (the app still refuses to
+  serve requests without the required production secrets).
