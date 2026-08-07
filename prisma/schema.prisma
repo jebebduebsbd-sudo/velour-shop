@@ -269,7 +269,7 @@ model Product {
   category    Category        @relation(fields: [categoryId], references: [id])
   /// Price in integer minor units (e.g. cents). Never floating point.
   priceMinor  Int
-  currency    String          @default("USD")
+  currency    String          @default("EUR")
   delivery    DeliveryType    @default(INSTANT_CODE)
   status      ProductStatus   @default(ACTIVE)
   /// Plain-language warranty statement for this product.

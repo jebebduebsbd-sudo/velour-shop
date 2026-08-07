@@ -289,6 +289,9 @@ function demoCode(): string {
 
 async function main() {
   // Catalog data is replaced wholesale; accounts are upserted, never dropped.
+  // Orders reference inventory units, so clear them first (dev seed only).
+  await prisma.orderEvent.deleteMany();
+  await prisma.order.deleteMany();
   await prisma.inventoryUnit.deleteMany();
   await prisma.product.deleteMany();
   await prisma.category.deleteMany();
@@ -316,7 +319,7 @@ async function main() {
           deliverable: product.deliverable,
           categoryId: category.id,
           priceMinor: product.priceMinor,
-          currency: "USD",
+          currency: "EUR",
           delivery: "INSTANT_CODE",
           status: "ACTIVE",
           warranty: product.warranty,
