@@ -4,6 +4,7 @@ import { VelourLogo } from "@/components/brand/logo";
 import { SidebarNav } from "@/components/layout/sidebar-nav";
 import { WalletChip } from "@/components/wallet/wallet-chip";
 import { requireSession } from "@/lib/auth/guards";
+import { getWalletBalance } from "@/lib/wallet/ledger";
 
 // Authenticated pages always render per-request and are never cached.
 export const dynamic = "force-dynamic";
@@ -12,6 +13,7 @@ export default async function CustomerLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   const session = await requireSession();
+  const balance = await getWalletBalance(session.user.id).catch(() => null);
 
   return (
     <div className="flex min-h-dvh flex-col">
@@ -27,7 +29,11 @@ export default async function CustomerLayout({
             <VelourLogo />
           </Link>
           <div className="flex-1" />
-          <WalletChip addFundsHref="/wallet/top-up" />
+          <WalletChip
+            balanceMinor={balance?.spendableMinor ?? 0}
+            currency={balance?.currency ?? "EUR"}
+            addFundsHref="/wallet/top-up"
+          />
           <span className="hidden text-sm text-ink-muted sm:inline">
             {session.user.username}
           </span>

@@ -20,6 +20,10 @@ export const AUDIT_ACTIONS = {
   sessionRevoked: "auth.session.revoked",
   accountLocked: "auth.account.locked",
   reauthenticated: "auth.reauthenticated",
+  walletTopUp: "wallet.topup.completed",
+  walletDebit: "wallet.debit",
+  walletRefund: "wallet.refund",
+  adminAdjustment: "wallet.admin_adjustment",
 } as const;
 
 export type AuditAction =

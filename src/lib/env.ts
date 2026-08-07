@@ -20,6 +20,17 @@ const serverEnvSchema = z.object({
   SESSION_SECRET: z.string().min(32).optional(),
   /** Pepper mixed into email token hashes. Required in production. */
   EMAIL_TOKEN_PEPPER: z.string().min(16).optional(),
+
+  /**
+   * Payment providers. Real providers are disabled by default and only
+   * activate when their flag is "true" AND their secrets are present. The
+   * mock provider is available only outside production.
+   */
+  PAYMENT_DSK_ENABLED: z.enum(["true", "false"]).default("false"),
+  PAYMENT_NOWPAYMENTS_ENABLED: z.enum(["true", "false"]).default("false"),
+  PAYMENT_OVGC_ENABLED: z.enum(["true", "false"]).default("false"),
+  /** Shared secret used to verify mock/dev webhook signatures. */
+  PAYMENT_WEBHOOK_SECRET: z.string().min(16).optional(),
   /**
    * 32-byte base64 master key for deliverable encryption. Optional until the
    * delivery phase, but validated for shape whenever present.
@@ -83,6 +94,12 @@ export function sessionSecret(): string {
 
 export function emailTokenPepper(): string {
   return serverEnv().EMAIL_TOKEN_PEPPER ?? DEV_EMAIL_TOKEN_PEPPER;
+}
+
+const DEV_WEBHOOK_SECRET = "velour-development-webhook-secret";
+
+export function paymentWebhookSecret(): string {
+  return serverEnv().PAYMENT_WEBHOOK_SECRET ?? DEV_WEBHOOK_SECRET;
 }
 
 export function isProduction(): boolean {

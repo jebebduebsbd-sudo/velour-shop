@@ -19,25 +19,145 @@ enum EmailTokenPurpose {
 }
 
 model User {
-  id               String       @id @default(cuid())
-  email            String       @unique
-  username         String       @unique
+  id               String          @id @default(cuid())
+  email            String          @unique
+  username         String          @unique
   /// Argon2id hash (or documented scrypt fallback). Never returned to clients.
   passwordHash     String
-  role             Role         @default(CUSTOMER)
+  role             Role            @default(CUSTOMER)
   emailVerifiedAt  DateTime?
   /// Set when the account is locked by an admin or by repeated failed logins.
   lockedUntil      DateTime?
   disabledAt       DateTime?
-  failedLoginCount Int          @default(0)
+  failedLoginCount Int             @default(0)
   lastLoginAt      DateTime?
-  createdAt        DateTime     @default(now())
-  updatedAt        DateTime     @updatedAt
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
   sessions         Session[]
   emailTokens      EmailToken[]
   auditEvents      AuditEvent[]
+  ledgerAccounts   LedgerAccount[]
+  walletTopUps     WalletTopUp[]
 
   @@index([role])
+}
+
+// ---------------------------------------------------------------------------
+// Wallet ledger (append-only, double-entry).
+//
+// Balance is never stored as a mutable column. It is the signed sum of a
+// user's postings, so history is auditable and can never silently drift.
+// Amounts are integer minor units (e.g. euro cents); never floating point.
+// ---------------------------------------------------------------------------
+
+enum LedgerAccountKind {
+  /// Real, cash-funded customer balance (spendable, refundable).
+  USER_CASH
+  /// Promotional / affiliate credit: spendable but non-withdrawable.
+  USER_PROMO
+  /// Funds reserved against an open order (moved out of USER_CASH).
+  USER_HELD
+  /// Platform-side counterparts that make each transaction balance to zero.
+  HOUSE_FUNDING
+  HOUSE_REVENUE
+  HOUSE_PROMO
+}
+
+enum LedgerTxnType {
+  TOP_UP
+  HOLD
+  HOLD_RELEASE
+  PURCHASE
+  REFUND
+  CHARGEBACK
+  ADMIN_ADJUSTMENT
+  PROMO_CREDIT
+}
+
+model LedgerAccount {
+  id        String            @id @default(cuid())
+  kind      LedgerAccountKind
+  currency  String            @default("EUR")
+  /// Set for USER_* accounts; null for pooled HOUSE_* accounts.
+  userId    String?
+  user      User?             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime          @default(now())
+  postings  LedgerPosting[]
+
+  // One account per (user, kind, currency); house accounts are unique per kind.
+  @@unique([userId, kind, currency])
+  @@index([kind])
+}
+
+model LedgerTransaction {
+  id            String          @id @default(cuid())
+  type          LedgerTxnType
+  currency      String          @default("EUR")
+  /// Human-facing description; must never contain secrets or deliverables.
+  description   String
+  /// Deduplication key (e.g. provider event id). Enforces single-apply.
+  idempotencyKey String?        @unique
+  metadata      Json?
+  createdAt     DateTime        @default(now())
+  postings      LedgerPosting[]
+
+  @@index([type, createdAt])
+}
+
+model LedgerPosting {
+  id            String            @id @default(cuid())
+  transactionId String
+  transaction   LedgerTransaction @relation(fields: [transactionId], references: [id], onDelete: Cascade)
+  accountId     String
+  account       LedgerAccount     @relation(fields: [accountId], references: [id])
+  /// Signed integer minor units. Sum across a transaction is always zero.
+  amount        Int
+  createdAt     DateTime          @default(now())
+
+  @@index([accountId])
+  @@index([transactionId])
+}
+
+enum TopUpStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  EXPIRED
+}
+
+model WalletTopUp {
+  id                String            @id @default(cuid())
+  userId            String
+  user              User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider          String
+  /// Amount credited to the wallet on success (minor units).
+  amountMinor       Int
+  /// Provider fee shown to the user (minor units); informational.
+  feeMinor          Int               @default(0)
+  currency          String            @default("EUR")
+  status            TopUpStatus       @default(PENDING)
+  /// Provider-side reference (invoice/session id). Not a secret.
+  providerReference String?           @unique
+  /// Ledger transaction created when the verified webhook completes the top-up.
+  ledgerTxnId       String?           @unique
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+
+  @@index([userId, status])
+}
+
+/// Verified provider callbacks. The unique (provider, externalId) makes
+/// webhook processing idempotent, so a replayed event credits the wallet once.
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  provider    String
+  externalId  String
+  /// Terse event type; raw payloads and signatures are never stored.
+  eventType   String
+  processedAt DateTime @default(now())
+
+  @@unique([provider, externalId])
+  @@index([provider, processedAt])
 }
 
 model Session {

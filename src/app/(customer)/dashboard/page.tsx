@@ -6,6 +6,8 @@ import { buttonClasses } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { requireSession } from "@/lib/auth/guards";
 import { formatMinor } from "@/lib/format";
+import { getWalletBalance } from "@/lib/wallet/ledger";
+import { getUserTransactions } from "@/lib/wallet/transactions";
 
 export const metadata: Metadata = {
   title: "Dashboard",
@@ -15,6 +17,10 @@ export const metadata: Metadata = {
 export default async function DashboardPage() {
   const session = await requireSession();
   const emailVerified = session.user.emailVerifiedAt !== null;
+  const [balance, recent] = await Promise.all([
+    getWalletBalance(session.user.id).catch(() => null),
+    getUserTransactions(session.user.id, { pageSize: 5 }).catch(() => null),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -61,8 +67,12 @@ export default async function DashboardPage() {
         <StatCard
           icon={Wallet}
           label="Available balance"
-          value={formatMinor(0)}
-          detail="Wallet ledger opens with the payments phase"
+          value={formatMinor(balance?.spendableMinor ?? 0, balance?.currency ?? "EUR")}
+          detail={
+            balance && balance.promoMinor > 0
+              ? `Includes ${formatMinor(balance.promoMinor, balance.currency)} promotional`
+              : "Spendable wallet balance"
+          }
         />
         <StatCard
           icon={ShoppingBag}
@@ -84,16 +94,52 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Panel className="p-6">
-          <h2 className="text-sm font-semibold text-ink">Recent activity</h2>
-          <p className="mt-8 mb-8 text-center text-sm text-ink-muted">
-            No activity yet. Browse the market to place your first order.
-          </p>
-          <Link
-            href="/market"
-            className={buttonClasses("secondary", "sm", "w-full")}
-          >
-            Open market
-          </Link>
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-ink">Recent activity</h2>
+            <Link
+              href="/wallet/transactions"
+              className="text-xs text-ink-muted transition-colors hover:text-ink"
+            >
+              View all →
+            </Link>
+          </div>
+          {recent && recent.rows.length > 0 ? (
+            <ul className="mt-4 divide-y divide-line">
+              {recent.rows.map((row) => {
+                const positive = row.amountMinor >= 0;
+                return (
+                  <li
+                    key={row.id}
+                    className="flex items-center justify-between gap-3 py-2.5 text-sm"
+                  >
+                    <span className="min-w-0 flex-1 truncate text-ink-muted">
+                      {row.description}
+                    </span>
+                    <span
+                      className={
+                        positive ? "text-success" : "text-ink"
+                      }
+                    >
+                      {positive ? "+" : "−"}
+                      {formatMinor(Math.abs(row.amountMinor), row.currency)}
+                    </span>
+                  </li>
+                );
+              })}
+            </ul>
+          ) : (
+            <>
+              <p className="mt-8 mb-8 text-center text-sm text-ink-muted">
+                No activity yet. Top up your wallet or browse the market.
+              </p>
+              <Link
+                href="/wallet/top-up"
+                className={buttonClasses("secondary", "sm", "w-full")}
+              >
+                Add funds
+              </Link>
+            </>
+          )}
         </Panel>
         <Panel className="p-6">
           <h2 className="text-sm font-semibold text-ink">Account</h2>
