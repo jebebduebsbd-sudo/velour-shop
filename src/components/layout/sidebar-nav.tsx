@@ -9,6 +9,7 @@ import {
   Receipt,
   ShieldCheck,
   ShoppingBag,
+  Sparkles,
   Store,
   UserRound,
   Wallet,
@@ -31,6 +32,12 @@ const SECTIONS = [
       { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
       { href: "/market", label: "Market", icon: Store },
       { href: "/orders", label: "Purchases", icon: ShoppingBag },
+    ],
+  },
+  {
+    label: "Earn",
+    items: [
+      { href: "/affiliate/dashboard", label: "Affiliate", icon: Sparkles },
     ],
   },
   {

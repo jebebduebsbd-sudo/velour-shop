@@ -26,6 +26,8 @@ export const AUDIT_ACTIONS = {
   adminAdjustment: "wallet.admin_adjustment",
   orderCreated: "order.created",
   deliveryReveal: "order.delivery.revealed",
+  affiliateConversion: "affiliate.conversion.recorded",
+  affiliateReward: "affiliate.reward.credited",
 } as const;
 
 export type AuditAction =

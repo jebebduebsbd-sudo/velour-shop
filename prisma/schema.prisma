@@ -39,8 +39,78 @@ model User {
   ledgerAccounts   LedgerAccount[]
   walletTopUps     WalletTopUp[]
   orders           Order[]
+  affiliateProfile AffiliateProfile?
+  /// The affiliate who referred this user (set once, at registration).
+  referredById     String?
+  referredBy       AffiliateProfile? @relation("Referrals", fields: [referredById], references: [id])
+  affiliateConversion AffiliateConversion?
 
   @@index([role])
+  @@index([referredById])
+}
+
+// ---------------------------------------------------------------------------
+// Affiliate / referral program.
+//
+// Rewards are paid only as non-withdrawable promotional balance, only after a
+// referred user's qualifying purchase clears a refund window. No reward is
+// granted for a click or a signup alone, and self-referral is rejected.
+// ---------------------------------------------------------------------------
+
+enum AffiliateRewardStatus {
+  /// Conversion recorded; reward is held during the refund window.
+  PENDING_REFUND_WINDOW
+  /// Reward matured and credited as promotional balance.
+  AVAILABLE
+  /// Qualifying order was refunded/charged back; reward reversed.
+  REVERSED
+  /// Rejected by fraud review.
+  REJECTED
+}
+
+model AffiliateProfile {
+  id          String                @id @default(cuid())
+  userId      String                @unique
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Public referral code used in links (velour.shop/r/<code>).
+  code        String                @unique
+  createdAt   DateTime              @default(now())
+  clicks      AffiliateClick[]
+  referrals   User[]                @relation("Referrals")
+  conversions AffiliateConversion[]
+}
+
+/// One row per referral-link visit; the funnel's top-of-funnel metric.
+model AffiliateClick {
+  id        String           @id @default(cuid())
+  profileId String
+  profile   AffiliateProfile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  createdAt DateTime         @default(now())
+
+  @@index([profileId, createdAt])
+}
+
+model AffiliateConversion {
+  id             String                @id @default(cuid())
+  profileId      String
+  profile        AffiliateProfile      @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  /// The referred buyer. Unique so a referred user yields at most one reward.
+  referredUserId String                @unique
+  referredUser   User                  @relation(fields: [referredUserId], references: [id], onDelete: Cascade)
+  /// The qualifying order (the referred user's first purchase).
+  orderId        String                @unique
+  /// Reward amount in integer minor units (paid as promo balance).
+  rewardMinor    Int
+  currency       String                @default("EUR")
+  status         AffiliateRewardStatus @default(PENDING_REFUND_WINDOW)
+  /// When the refund window elapses and the reward may be credited.
+  availableAt    DateTime
+  /// Ledger transaction created when the reward is credited (idempotency).
+  rewardLedgerTxnId String?            @unique
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([profileId, status])
 }
 
 // ---------------------------------------------------------------------------

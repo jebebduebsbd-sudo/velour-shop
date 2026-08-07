@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { clearReferralCookie, readReferralCookie } from "@/lib/affiliate/referral-cookie";
 import { AUDIT_ACTIONS, recordAuditEvent } from "@/lib/audit";
 import { getActiveSession, createSession, destroyCurrentSession } from "@/lib/auth/session";
 import {
@@ -206,11 +207,13 @@ export async function signUpAction(
       return { status: "error", formMessage: RATE_LIMITED };
     }
 
+    const referralCode = await readReferralCookie();
     const result = await registerUser({
       email: parsed.data.email,
       username: parsed.data.username,
       password: parsed.data.password,
       ipHash,
+      referralCode,
     });
 
     if (!result.ok) {
@@ -229,6 +232,8 @@ export async function signUpAction(
       ipHash,
       userAgent: await clientUserAgent(),
     });
+    // Attribution is now persisted on the account; the cookie is no longer needed.
+    await clearReferralCookie();
 
     return {
       status: "notice",

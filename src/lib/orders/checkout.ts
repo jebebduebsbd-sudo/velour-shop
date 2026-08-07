@@ -1,3 +1,4 @@
+import { recordConversion } from "@/lib/affiliate/service";
 import { AUDIT_ACTIONS, recordAuditEvent } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
 import {
@@ -163,6 +164,15 @@ export async function checkout(input: {
         metadata: { productId: product.id },
         ipHash: input.ipHash,
       });
+
+      // Referral attribution: records a conversion only for the buyer's first
+      // purchase (unique per referred user). Non-fatal — never blocks checkout.
+      await recordConversion({
+        referredUserId: input.userId,
+        orderId: outcome.orderId,
+        orderAmountMinor: product.priceMinor,
+        currency: product.currency,
+      }).catch(() => undefined);
     }
 
     return { ok: true, orderId: outcome.orderId, reused: outcome.reused };

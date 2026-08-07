@@ -22,6 +22,8 @@ export async function registerUser(input: {
   username: string;
   password: string;
   ipHash?: string | null;
+  /** Referral code from the attribution cookie, if any. */
+  referralCode?: string | null;
 }): Promise<RegisterResult> {
   const email = input.email.toLowerCase();
   const existing = await prisma.user.findFirst({
@@ -35,9 +37,20 @@ export async function registerUser(input: {
     };
   }
 
+  // Attribute the referral if the code resolves to an existing affiliate.
+  // A brand-new user can never be their own referrer, so no self-referral.
+  let referredById: string | null = null;
+  if (input.referralCode) {
+    const profile = await prisma.affiliateProfile.findUnique({
+      where: { code: input.referralCode.toUpperCase() },
+      select: { id: true },
+    });
+    referredById = profile?.id ?? null;
+  }
+
   const passwordHash = await hashPassword(input.password);
   const user = await prisma.user.create({
-    data: { email, username: input.username, passwordHash },
+    data: { email, username: input.username, passwordHash, referredById },
     select: { id: true },
   });
 

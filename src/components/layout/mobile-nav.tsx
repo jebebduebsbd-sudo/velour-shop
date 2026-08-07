@@ -77,6 +77,11 @@ export function MobileNav({
           <nav aria-label="Mobile" className="space-y-1">
             <MobileLink href="/market" label="Market" pathname={pathname} />
             <MobileLink
+              href="/affiliate"
+              label="Earn with Velour"
+              pathname={pathname}
+            />
+            <MobileLink
               href="/buyer-protection"
               label="Buyer protection"
               pathname={pathname}
