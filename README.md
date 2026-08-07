@@ -20,7 +20,7 @@ a server-only provider interface, be disabled by default, and fail closed.
 
 ## Current status
 
-Phases 1–6 of the build plan are implemented:
+Storefront, authentication, and the wallet ledger are implemented:
 
 - Velour branding and design-token system (CSS variables + Tailwind 4)
 - Shared public shell (header, footer, mobile navigation, wallet chip)
@@ -38,13 +38,39 @@ Phases 1–6 of the build plan are implemented:
 - Authenticated customer shell with sidebar: dashboard, profile, security
 - Security headers via `proxy.ts` (CSP with per-request nonce, HSTS,
   Referrer-Policy, Permissions-Policy, frame-ancestors, cache controls)
+- Append-only double-entry wallet ledger (integer minor units, zero-sum
+  transactions, balance computed from postings), separate cash / promotional
+  / held balances
+- Payment provider architecture: `PaymentProvider` interface + mock provider;
+  DSK / NOWPayments / OVGC adapters scaffolded but disabled and fail-closed
+- Wallet top-up flow with webhook-only crediting (HMAC-verified, replay-safe),
+  transactions page with filters/pagination, owner-scoped CSV export
 - PostgreSQL schema (accounts, sessions, email tokens, audit events, rate
-  limits, catalog) with encrypted-at-rest demo inventory payloads
+  limits, catalog, ledger, top-ups, webhook events) with encrypted-at-rest
+  demo inventory payloads
 
-Not yet implemented (later phases): wallet ledger, top-ups, checkout,
-orders, refunds/disputes, admin interfaces, Railway deployment. Sidebar
-entries for those areas are present but their pages arrive with the
-corresponding phase.
+Not yet implemented (later phases): wallet-only checkout/orders, refunds and
+disputes, the affiliate platform, reviews, Fortnite gifting fulfillment,
+admin interfaces, Bulgarian localization, and Railway deployment. Some sidebar
+entries point to pages that arrive with the corresponding phase.
+
+### Payment providers
+
+Real providers are disabled by default. Each activates only when its feature
+flag is set AND its live adapter is configured with merchant credentials
+(which arrive through server-side secrets, never source). Until then only the
+mock provider (development) is offered, and every real adapter fails closed.
+
+| Provider | Flag | Status |
+| --- | --- | --- |
+| Mock (demo) | — | Enabled outside production |
+| DSK Bank vPOS (card) | `PAYMENT_DSK_ENABLED` | Scaffolded, disabled |
+| NOWPayments (crypto) | `PAYMENT_NOWPAYMENTS_ENABLED` | Scaffolded, disabled |
+| OVGC (voucher) | `PAYMENT_OVGC_ENABLED` | Scaffolded, disabled |
+
+Wallet credit is created only by a verified server-to-server webhook at
+`/api/webhooks/payment/[provider]` — never from a browser redirect or success
+page.
 
 ### Demo accounts (development seed only)
 
@@ -97,6 +123,10 @@ startup by `src/lib/env.ts` (Zod).
 | `SESSION_SECRET` | production | Derives session/IP hashing keys (min 32 chars) |
 | `EMAIL_TOKEN_PEPPER` | production | Pepper for email token hashes (min 16 chars) |
 | `DELIVERY_MASTER_KEY_B64` | seeding/delivery | 32-byte base64 key for deliverable encryption (kept outside the DB) |
+| `PAYMENT_WEBHOOK_SECRET` | payments | HMAC secret for verifying payment webhooks (min 16 chars) |
+| `PAYMENT_DSK_ENABLED` | optional | `true` to enable the DSK card adapter once configured |
+| `PAYMENT_NOWPAYMENTS_ENABLED` | optional | `true` to enable the NOWPayments adapter once configured |
+| `PAYMENT_OVGC_ENABLED` | optional | `true` to enable the OVGC adapter once configured |
 
 Production startup rejects missing `SESSION_SECRET` or `EMAIL_TOKEN_PEPPER`;
 development falls back to clearly-marked local values. Never commit real
