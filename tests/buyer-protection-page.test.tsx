@@ -15,7 +15,15 @@ vi.mock("next/navigation", () => ({
 
 describe("Buyer Protection navigation", () => {
   it("is a real link in the primary navigation", () => {
-    render(<NavLinks />);
+    render(
+      <NavLinks
+        labels={{
+          market: "Market",
+          earn: "Earn with Velour",
+          buyerProtection: "Buyer protection",
+        }}
+      />,
+    );
     const link = screen.getByRole("link", { name: /buyer protection/i });
     expect(link).toHaveAttribute("href", "/buyer-protection");
     expect(link).toHaveAttribute("aria-current", "page");

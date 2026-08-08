@@ -4,6 +4,7 @@ import type { ComboboxCategory } from "@/components/category/category-combobox";
 import { getActiveSession } from "@/lib/auth/session";
 import { getCategorySummaries } from "@/lib/catalog";
 import { CATEGORY_DEFS } from "@/lib/categories";
+import { getMessages } from "@/lib/i18n/server";
 
 // Storefront data (stock counts, live inventory) is read per-request.
 export const dynamic = "force-dynamic";
@@ -34,10 +35,12 @@ async function getHeaderData(): Promise<{
 export default async function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [{ categories, totalUnits }, session] = await Promise.all([
-    getHeaderData(),
-    getActiveSession().catch(() => null),
-  ]);
+  const [{ categories, totalUnits }, session, { locale, t }] =
+    await Promise.all([
+      getHeaderData(),
+      getActiveSession().catch(() => null),
+      getMessages(),
+    ]);
   return (
     <div className="flex min-h-dvh flex-col">
       <a
@@ -50,11 +53,17 @@ export default async function PublicLayout({
         categories={categories}
         totalUnits={totalUnits}
         username={session?.user.username}
+        locale={locale}
+        t={t}
       />
       <main id="main-content" className="flex-1">
         {children}
       </main>
-      <SiteFooter />
+      <SiteFooter
+        tagline={t.footer.tagline}
+        disclaimer={t.footer.disclaimer}
+        locale={locale}
+      />
     </div>
   );
 }

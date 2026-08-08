@@ -22,37 +22,40 @@ import {
   getStorefrontStats,
 } from "@/lib/catalog";
 import { formatCount, formatMinor } from "@/lib/format";
+import type { Messages } from "@/lib/i18n/dictionaries";
+import { getMessages } from "@/lib/i18n/server";
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { t } = await getMessages();
   return (
     <div className="mx-auto max-w-7xl space-y-14 px-4 py-10 sm:px-6 lg:space-y-20 lg:py-14">
       <section className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_24rem] xl:grid-cols-[minmax(0,1fr)_26rem]">
-        <Hero />
+        <Hero t={t} />
         <Suspense fallback={<LiveInventorySkeleton />}>
-          <LiveInventoryPanel />
+          <LiveInventoryPanel t={t} />
         </Suspense>
       </section>
 
-      <TrustStrip />
+      <TrustStrip t={t} />
 
       <section aria-labelledby="categories-heading">
         <SectionHeading
-          eyebrow="Explore categories"
+          eyebrow={t.sections.exploreCategories}
           id="categories-heading"
-          title="Choose a platform"
-          link={{ href: "/market", label: "View all categories" }}
+          title={t.sections.choosePlatform}
+          link={{ href: "/market", label: t.sections.viewAllCategories }}
         />
         <Suspense fallback={<CategoriesSkeleton />}>
-          <CategoriesGrid />
+          <CategoriesGrid t={t} />
         </Suspense>
       </section>
 
       <section aria-labelledby="featured-heading">
         <SectionHeading
-          eyebrow="Featured"
+          eyebrow={t.sections.featured}
           id="featured-heading"
-          title="Featured inventory"
-          link={{ href: "/market", label: "View full market" }}
+          title={t.sections.featuredTitle}
+          link={{ href: "/market", label: t.sections.viewFullMarket }}
         />
         <Suspense fallback={<FeaturedSkeleton />}>
           <FeaturedGrid />
@@ -62,7 +65,7 @@ export default function HomePage() {
   );
 }
 
-function Hero() {
+function Hero({ t }: { t: Messages }) {
   return (
     <div className="relative overflow-hidden rounded-xl border border-line bg-surface-1 p-8 sm:p-10 lg:p-12">
       <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -98,41 +101,39 @@ function Hero() {
             aria-hidden="true"
             className="h-1.5 w-1.5 rounded-full bg-accent"
           />
-          Welcome to Velour
+          {t.hero.welcome}
         </p>
         <h1 className="mt-5 text-4xl leading-[1.05] font-bold tracking-tight text-ink sm:text-5xl xl:text-6xl">
-          Premium digital goods.
+          {t.hero.titleLine1}
           <br />
           <span className="bg-linear-to-r from-orchid via-accent to-lilac bg-clip-text italic text-transparent">
-            Instant access.
+            {t.hero.titleLine2}
           </span>
         </h1>
         <p className="mt-5 max-w-xl text-base text-ink-muted sm:text-lg">
-          Browse clear, verified listings for lawful gift codes, wallet codes,
-          vouchers, and official keys — with visible stock, wallet-only
-          checkout, and a structured delivery flow.
+          {t.hero.subtitle}
         </p>
         <div className="mt-8 flex flex-wrap items-center gap-3">
           <Link href="/market" className={buttonClasses("primary", "lg")}>
-            Browse market
+            {t.hero.browseMarket}
             <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </Link>
           <Link
             href="/auth/sign-in"
             className={buttonClasses("secondary", "lg")}
           >
-            Top up wallet
+            {t.hero.topUp}
           </Link>
         </div>
         <Suspense fallback={<StatsSkeleton />}>
-          <HeroStats />
+          <HeroStats t={t} />
         </Suspense>
       </div>
     </div>
   );
 }
 
-async function HeroStats() {
+async function HeroStats({ t }: { t: Messages }) {
   let stats;
   try {
     stats = await getStorefrontStats();
@@ -140,9 +141,9 @@ async function HeroStats() {
     return null;
   }
   const items = [
-    { value: formatCount(stats.availableUnits), label: "units in stock" },
-    { value: formatCount(stats.categories), label: "market categories" },
-    { value: formatCount(stats.activeProducts), label: "products listed" },
+    { value: formatCount(stats.availableUnits), label: t.hero.unitsInStock },
+    { value: formatCount(stats.categories), label: t.hero.categories },
+    { value: formatCount(stats.activeProducts), label: t.hero.productsListed },
   ];
   return (
     <dl className="mt-10 grid max-w-md grid-cols-3 gap-4 border-t border-line pt-6">
@@ -170,14 +171,14 @@ function StatsSkeleton() {
   );
 }
 
-async function LiveInventoryPanel() {
+async function LiveInventoryPanel({ t }: { t: Messages }) {
   let products;
   try {
     products = await getLiveInventory(5);
   } catch {
     return (
       <Panel className="p-5" role="status">
-        <PanelHeading />
+        <PanelHeading t={t} />
         <p className="py-10 text-center text-sm text-ink-muted">
           The inventory feed is temporarily unavailable. Please refresh in a
           moment.
@@ -188,7 +189,7 @@ async function LiveInventoryPanel() {
 
   return (
     <Panel className="p-5">
-      <PanelHeading />
+      <PanelHeading t={t} />
       {products.length === 0 ? (
         <p className="py-10 text-center text-sm text-ink-muted">
           No stocked listings right now — check back soon.
@@ -227,7 +228,7 @@ async function LiveInventoryPanel() {
   );
 }
 
-function PanelHeading() {
+function PanelHeading({ t }: { t: Messages }) {
   return (
     <div className="flex items-center justify-between">
       <h2 className="flex items-center gap-2 text-sm font-semibold tracking-wide text-ink uppercase">
@@ -235,13 +236,13 @@ function PanelHeading() {
           aria-hidden="true"
           className="h-2 w-2 rounded-full bg-success"
         />
-        Live inventory
+        {t.sections.liveInventory}
       </h2>
       <Link
         href="/market"
         className="text-xs text-ink-muted transition-colors hover:text-ink"
       >
-        View all →
+        {t.sections.viewAll} →
       </Link>
     </div>
   );
@@ -270,30 +271,13 @@ function LiveInventorySkeleton() {
   );
 }
 
-const TRUST_ITEMS = [
-  {
-    icon: ShieldCheck,
-    title: "Trusted checkout",
-    detail: "Review the exact scope of every listing before paying.",
-  },
-  {
-    icon: Zap,
-    title: "Fast authorized delivery",
-    detail: "Stocked codes move to your orders right after checkout.",
-  },
-  {
-    icon: FileCheck2,
-    title: "Documented inventory",
-    detail: "Listings state exactly what you receive — nothing implied.",
-  },
-  {
-    icon: Wallet,
-    title: "Balance-only purchases",
-    detail: "Products are paid from your Velour wallet, never a card directly.",
-  },
-] as const;
-
-function TrustStrip() {
+function TrustStrip({ t }: { t: Messages }) {
+  const TRUST_ITEMS = [
+    { icon: ShieldCheck, title: t.trust.secureTitle, detail: t.trust.secureDetail },
+    { icon: Zap, title: t.trust.fastTitle, detail: t.trust.fastDetail },
+    { icon: FileCheck2, title: t.trust.verifiedTitle, detail: t.trust.verifiedDetail },
+    { icon: Wallet, title: t.trust.balanceTitle, detail: t.trust.balanceDetail },
+  ] as const;
   return (
     <section aria-label="Why buy on Velour">
       <Panel className="grid grid-cols-1 divide-y divide-line sm:grid-cols-2 sm:divide-y-0 lg:grid-cols-4 lg:divide-x">
@@ -346,7 +330,7 @@ function SectionHeading({
   );
 }
 
-async function CategoriesGrid() {
+async function CategoriesGrid({ t }: { t: Messages }) {
   let categories;
   try {
     categories = await getCategorySummaries();
@@ -375,8 +359,8 @@ async function CategoriesGrid() {
               }`}
             >
               {category.availableUnits > 0
-                ? `${formatCount(category.availableUnits)} available`
-                : "Out of stock"}
+                ? `${formatCount(category.availableUnits)} ${t.sections.available}`
+                : t.sections.outOfStock}
             </span>
           </Link>
         </li>

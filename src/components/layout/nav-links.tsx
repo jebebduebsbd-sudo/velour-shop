@@ -3,14 +3,19 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const LINKS = [
-  { href: "/market", label: "Market" },
-  { href: "/affiliate", label: "Earn with Velour" },
-  { href: "/buyer-protection", label: "Buyer protection" },
-] as const;
+export type NavLabels = {
+  market: string;
+  earn: string;
+  buyerProtection: string;
+};
 
-export function NavLinks() {
+export function NavLinks({ labels }: { labels: NavLabels }) {
   const pathname = usePathname();
+  const LINKS = [
+    { href: "/market", label: labels.market },
+    { href: "/affiliate", label: labels.earn },
+    { href: "/buyer-protection", label: labels.buyerProtection },
+  ] as const;
   return (
     <nav aria-label="Primary" className="flex items-center gap-1">
       {LINKS.map((link) => {

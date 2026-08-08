@@ -98,10 +98,12 @@ export function CategoryCombobox({
   categories,
   totalUnits,
   activeSlug = null,
+  label = "Browse categories",
 }: {
   categories: ComboboxCategory[];
   totalUnits: number;
   activeSlug?: string | null;
+  label?: string;
 }) {
   const router = useRouter();
   const baseId = useId();
@@ -248,7 +250,7 @@ export function CategoryCombobox({
         className="inline-flex h-10 items-center gap-2 rounded-md border border-line bg-surface-2 px-3 text-sm text-ink-muted transition-colors duration-(--duration-base) hover:border-line-strong hover:text-ink"
       >
         <LayoutGrid className="h-4 w-4 text-orchid" aria-hidden="true" />
-        <span>Browse categories</span>
+        <span>{label}</span>
         <ChevronDown
           className={`h-4 w-4 transition-transform duration-(--duration-base) ${open ? "rotate-180" : ""}`}
           aria-hidden="true"
@@ -261,7 +263,7 @@ export function CategoryCombobox({
             Market directory
           </p>
           <div className="flex items-baseline justify-between px-2 pb-2">
-            <p className="text-sm font-semibold text-ink">Browse categories</p>
+            <p className="text-sm font-semibold text-ink">{label}</p>
             <p className="text-xs text-ink-faint">
               {formatCount(totalUnits)} units live
             </p>
