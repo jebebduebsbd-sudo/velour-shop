@@ -10,6 +10,7 @@ import {
   Receipt,
   RotateCcw,
   ShieldCheck,
+  ShieldHalf,
   ShoppingBag,
   Sparkles,
   Store,
@@ -98,12 +99,21 @@ function activeHref(pathname: string): string | null {
   return best;
 }
 
-export function SidebarNav() {
+export function SidebarNav({ showAdmin = false }: { showAdmin?: boolean }) {
   const pathname = usePathname();
   const current = activeHref(pathname);
 
   return (
     <nav aria-label="Account" className="space-y-6">
+      {showAdmin ? (
+        <Link
+          href="/admin"
+          className="flex items-center gap-2.5 rounded-md border border-accent/40 bg-accent/10 px-3 py-2 text-sm font-semibold text-lilac transition-colors duration-(--duration-base) hover:bg-accent/15"
+        >
+          <ShieldHalf className="h-4 w-4 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+          Admin panel
+        </Link>
+      ) : null}
       {SECTIONS.map((section) => (
         <div key={section.label}>
           <p className="px-3 pb-2 text-[0.65rem] font-semibold tracking-[0.18em] text-ink-faint uppercase">

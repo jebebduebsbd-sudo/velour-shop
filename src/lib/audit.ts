@@ -32,6 +32,12 @@ export const AUDIT_ACTIONS = {
   refundDecided: "refund.decided",
   disputeOpened: "dispute.opened",
   disputeAction: "dispute.action",
+  adminProductStatus: "admin.product.status",
+  adminSupplierEvidence: "admin.supplier.evidence",
+  inventoryImport: "admin.inventory.import",
+  adminUserLock: "admin.user.lock",
+  adminUserUnlock: "admin.user.unlock",
+  permissionChange: "admin.permission.change",
 } as const;
 
 export type AuditAction =

@@ -300,8 +300,31 @@ model RateLimitBucket {
 
 enum ProductStatus {
   DRAFT
+  /// Cannot be activated until a supplier with verified transfer-right
+  /// evidence is linked. Hidden from the storefront; checkout is blocked.
+  COMPLIANCE_REVIEW
   ACTIVE
   ARCHIVED
+}
+
+/// A supplier / inventory source and its transfer-rights evidence. A product
+/// may only be ACTIVE when linked to a supplier whose evidence is verified.
+model Supplier {
+  id               String    @id @default(cuid())
+  name             String
+  legalName        String?
+  contractRef      String?
+  /// Plain-language description of the documented transfer/resale rights.
+  transferEvidence String
+  region           String    @default("Global")
+  acquiredAt       DateTime?
+  evidenceVerified Boolean   @default(false)
+  complianceNote   String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  products         Product[]
+
+  @@index([evidenceVerified])
 }
 
 enum DeliveryType {
@@ -350,6 +373,8 @@ model Product {
   /// Region or platform restrictions shown to the buyer before purchase.
   region      String          @default("Global")
   featured    Boolean         @default(false)
+  supplierId  String?
+  supplier    Supplier?       @relation(fields: [supplierId], references: [id])
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   units       InventoryUnit[]

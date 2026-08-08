@@ -46,7 +46,7 @@ export default async function CustomerLayout({
           className="hidden w-56 shrink-0 lg:block"
         >
           <div className="sticky top-24">
-            <SidebarNav />
+            <SidebarNav showAdmin={session.user.role === "ADMIN"} />
           </div>
         </aside>
         <main id="main-content" className="min-w-0 flex-1">
