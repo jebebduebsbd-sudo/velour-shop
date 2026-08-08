@@ -79,16 +79,20 @@ Wallet credit is created only by a verified server-to-server webhook at
 `/api/webhooks/payment/[provider]` — never from a browser redirect or success
 page.
 
-### Demo accounts (development seed only)
+### Demo accounts (optional, development only)
 
-| Email | Username | Role | State |
-| --- | --- | --- | --- |
-| `demo@velour.shop` | `demo` | CUSTOMER | verified |
-| `unverified@velour.shop` | `newcomer` | CUSTOMER | unverified |
-| `admin@velour.shop` | `admin` | ADMIN | verified |
+No accounts or passwords are committed to the repository. If you want demo
+accounts for local development, opt in explicitly and choose your own password:
 
-Password for all three: `velour-demo-2026`. These are never created when
-`NODE_ENV=production`.
+```bash
+SEED_DEMO_ACCOUNTS=true DEMO_ACCOUNT_PASSWORD=<your-password> npm run db:seed
+```
+
+That creates `demo@velour.shop` (CUSTOMER, verified), `unverified@velour.shop`
+(CUSTOMER, unverified), and `admin@velour.shop` (ADMIN, verified), all with the
+password you provide. They are never created when `NODE_ENV=production`, and the
+password is never printed or stored in the repo. Otherwise, register a normal
+account through the sign-up flow.
 
 ## Requirements
 

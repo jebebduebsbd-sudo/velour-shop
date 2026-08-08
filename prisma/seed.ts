@@ -355,15 +355,26 @@ async function main() {
 }
 
 /**
- * Local demo accounts. The password is a well-known development value and is
- * only created outside production.
+ * Optional local demo accounts.
+ *
+ * No account or password is hardcoded in the repository. Demo accounts are
+ * created only when explicitly opted in for local development:
+ *   SEED_DEMO_ACCOUNTS=true DEMO_ACCOUNT_PASSWORD=<your-choice> npm run db:seed
+ * They are never created in production.
  */
 async function seedDemoAccounts() {
-  if (process.env.NODE_ENV === "production") {
-    console.log("Skipping demo accounts (NODE_ENV=production).");
+  if (process.env.NODE_ENV === "production") return;
+  if (process.env.SEED_DEMO_ACCOUNTS !== "true") return;
+
+  const password = process.env.DEMO_ACCOUNT_PASSWORD;
+  if (!password || password.length < 8) {
+    console.log(
+      "Skipping demo accounts: set DEMO_ACCOUNT_PASSWORD (min 8 chars) to create them.",
+    );
     return;
   }
-  const passwordHash = await hashPassword("velour-demo-2026");
+
+  const passwordHash = await hashPassword(password);
   const accounts = [
     {
       email: "demo@velour.shop",
@@ -402,9 +413,8 @@ async function seedDemoAccounts() {
       },
     });
   }
-  console.log(
-    `Seeded ${accounts.length} demo accounts (password: velour-demo-2026).`,
-  );
+  // The password is never printed.
+  console.log(`Seeded ${accounts.length} demo accounts (opt-in).`);
 }
 
 main()
