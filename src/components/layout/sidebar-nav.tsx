@@ -6,7 +6,9 @@ import {
   LayoutDashboard,
   LifeBuoy,
   LogOut,
+  MessageSquareWarning,
   Receipt,
+  RotateCcw,
   ShieldCheck,
   ShoppingBag,
   Sparkles,
@@ -57,6 +59,8 @@ const SECTIONS = [
   {
     label: "Support",
     items: [
+      { href: "/refunds", label: "Refunds", icon: RotateCcw },
+      { href: "/disputes", label: "Disputes", icon: MessageSquareWarning },
       { href: "/support", label: "Tickets", icon: LifeBuoy },
       {
         href: "/buyer-protection",

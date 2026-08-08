@@ -28,6 +28,10 @@ export const AUDIT_ACTIONS = {
   deliveryReveal: "order.delivery.revealed",
   affiliateConversion: "affiliate.conversion.recorded",
   affiliateReward: "affiliate.reward.credited",
+  refundRequested: "refund.requested",
+  refundDecided: "refund.decided",
+  disputeOpened: "dispute.opened",
+  disputeAction: "dispute.action",
 } as const;
 
 export type AuditAction =

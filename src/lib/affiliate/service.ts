@@ -2,7 +2,7 @@ import { randomBytes } from "node:crypto";
 
 import { AUDIT_ACTIONS, recordAuditEvent } from "@/lib/audit";
 import { prisma } from "@/lib/prisma";
-import { creditPromo } from "@/lib/wallet/ledger";
+import { creditPromo, reversePromo } from "@/lib/wallet/ledger";
 
 /**
  * Honest affiliate/referral program.
@@ -203,12 +203,25 @@ export async function reverseRewardForOrder(orderId: string): Promise<void> {
   });
   if (!conversion || conversion.status === "REVERSED") return;
 
+  const wasCredited = conversion.status === "AVAILABLE";
+
   await prisma.affiliateConversion.update({
     where: { id: conversion.id },
     data: { status: "REVERSED" },
   });
-  // A full clawback posting is handled by the ledger refund service when the
-  // refunds phase lands; the status flip already stops maturation.
+
+  // If the reward was already credited as promo balance, claw it back with a
+  // compensating posting. If it was still pending, the status flip alone stops
+  // maturation and nothing was credited.
+  if (wasCredited) {
+    await reversePromo({
+      userId: conversion.profile.userId,
+      amountMinor: conversion.rewardMinor,
+      currency: conversion.currency,
+      idempotencyKey: `affiliate-reward-reversal:${conversion.id}`,
+      description: "Affiliate reward reversed (order refunded)",
+    }).catch(() => undefined);
+  }
 }
 
 export type AffiliateSummary = {

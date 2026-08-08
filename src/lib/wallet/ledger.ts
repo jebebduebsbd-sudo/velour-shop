@@ -330,6 +330,75 @@ export async function postPurchaseDebit(
 }
 
 /**
+ * Posts a compensating refund transaction that mirrors (negates) the original
+ * purchase's postings, restoring the exact cash/promo split the buyer paid and
+ * reversing house revenue. Because it negates a set that summed to zero, the
+ * refund also sums to zero. Idempotent on the order.
+ *
+ * Refund amount therefore equals the amount actually paid — it can never exceed
+ * it. Returns null when there is nothing to reverse.
+ */
+export async function postRefundReversal(input: {
+  orderId: string;
+  purchaseTransactionId: string;
+  currency?: string;
+  description: string;
+  metadata?: Prisma.InputJsonValue;
+}): Promise<{ transactionId: string; applied: boolean } | null> {
+  const original = await prisma.ledgerTransaction.findUnique({
+    where: { id: input.purchaseTransactionId },
+    select: {
+      type: true,
+      postings: { select: { accountId: true, amount: true } },
+    },
+  });
+  if (!original || original.type !== "PURCHASE") return null;
+
+  const postings = original.postings.map((posting) => ({
+    accountId: posting.accountId,
+    amount: -posting.amount,
+  }));
+
+  return postTransaction(prisma, {
+    type: "REFUND",
+    description: input.description,
+    currency: input.currency ?? DEFAULT_CURRENCY,
+    idempotencyKey: `refund:${input.orderId}`,
+    metadata: input.metadata,
+    postings,
+  });
+}
+
+/**
+ * Reverses a promotional credit (e.g. an affiliate reward that was clawed back
+ * after a refund). Debits the user's promo account against the house promo
+ * account. Idempotent on the provided key.
+ */
+export async function reversePromo(input: {
+  userId: string;
+  amountMinor: number;
+  currency?: string;
+  idempotencyKey: string;
+  description: string;
+}): Promise<{ transactionId: string; applied: boolean }> {
+  const currency = input.currency ?? DEFAULT_CURRENCY;
+  const [userPromo, housePromo] = await Promise.all([
+    ensureAccount(prisma, "USER_PROMO", input.userId, currency),
+    ensureAccount(prisma, "HOUSE_PROMO", null, currency),
+  ]);
+  return postTransaction(prisma, {
+    type: "PROMO_CREDIT",
+    description: input.description,
+    currency,
+    idempotencyKey: input.idempotencyKey,
+    postings: [
+      { accountId: userPromo, amount: -input.amountMinor },
+      { accountId: housePromo, amount: input.amountMinor },
+    ],
+  });
+}
+
+/**
  * Credits promotional (non-withdrawable) balance, e.g. an affiliate reward or
  * referral bonus. Balanced against the house promo account.
  */

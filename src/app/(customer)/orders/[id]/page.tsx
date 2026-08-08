@@ -3,12 +3,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { OrderSupportActions } from "@/components/orders/order-support-actions";
 import { RevealDeliverable } from "@/components/orders/reveal-deliverable";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
 import { requireSession } from "@/lib/auth/guards";
 import { formatMinor } from "@/lib/format";
 import { getUserOrder } from "@/lib/orders/orders";
+import { prisma } from "@/lib/prisma";
 
 export const metadata: Metadata = {
   title: "Order",
@@ -20,9 +22,23 @@ export default async function OrderDetailPage(
 ) {
   const session = await requireSession("/orders");
   const { id } = await props.params;
+  const searchParams = await props.searchParams;
   // Ownership enforced in the query — another user's id resolves to null → 404.
   const order = await getUserOrder(session.user.id, id);
   if (!order) notFound();
+
+  const [existingRefund, existingDispute] = await Promise.all([
+    prisma.refund.findUnique({
+      where: { orderId: order.id },
+      select: { id: true, status: true },
+    }),
+    prisma.dispute.findUnique({
+      where: { orderId: order.id },
+      select: { id: true },
+    }),
+  ]);
+  const notice =
+    typeof searchParams.refund === "string" ? searchParams.refund : undefined;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -104,6 +120,14 @@ export default async function OrderDetailPage(
             Buyer Protection policy →
           </Link>
         </div>
+
+        <OrderSupportActions
+          orderId={order.id}
+          refundable={order.status === "FULFILLED"}
+          refundStatus={existingRefund?.status ?? null}
+          disputeId={existingDispute?.id ?? null}
+          notice={notice}
+        />
       </Panel>
     </div>
   );

@@ -44,6 +44,9 @@ model User {
   referredById     String?
   referredBy       AffiliateProfile? @relation("Referrals", fields: [referredById], references: [id])
   affiliateConversion AffiliateConversion?
+  refunds          Refund[]
+  disputes         Dispute[]
+  disputeMessages  DisputeMessage[]
 
   @@index([role])
   @@index([referredById])
@@ -412,6 +415,8 @@ model Order {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
   events          OrderEvent[]
+  refund          Refund?
+  dispute         Dispute?
 
   @@index([userId, createdAt])
   @@index([status])
@@ -426,4 +431,76 @@ model OrderEvent {
   createdAt DateTime    @default(now())
 
   @@index([orderId, createdAt])
+}
+
+enum RefundStatus {
+  REQUESTED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  PROCESSED
+  FAILED
+}
+
+model Refund {
+  id             String       @id @default(cuid())
+  /// One refund case per order (duplicate requests are idempotent).
+  orderId        String       @unique
+  order          Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// Amount to refund (minor units). Never exceeds the order's paid amount.
+  amountMinor    Int
+  currency       String       @default("EUR")
+  status         RefundStatus @default(REQUESTED)
+  reason         String
+  resolutionNote String?
+  /// Compensating ledger transaction created when the refund is processed.
+  ledgerTxnId    String?      @unique
+  /// Staff user who decided a manually-reviewed refund.
+  decidedById    String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([userId, status])
+  @@index([status])
+}
+
+enum DisputeStatus {
+  OPEN
+  CUSTOMER_RESPONSE_REQUIRED
+  MERCHANT_REVIEW
+  RESOLVED_CUSTOMER
+  RESOLVED_MERCHANT
+  CLOSED
+}
+
+model Dispute {
+  id        String           @id @default(cuid())
+  orderId   String           @unique
+  order     Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  status    DisputeStatus    @default(OPEN)
+  reason    String
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  messages  DisputeMessage[]
+
+  @@index([userId, status])
+  @@index([status])
+}
+
+model DisputeMessage {
+  id         String   @id @default(cuid())
+  disputeId  String
+  dispute    Dispute  @relation(fields: [disputeId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  /// Snapshot of the author's role at write time (CUSTOMER / SUPPORT / ADMIN).
+  authorRole Role
+  body       String
+  createdAt  DateTime @default(now())
+
+  @@index([disputeId, createdAt])
 }
