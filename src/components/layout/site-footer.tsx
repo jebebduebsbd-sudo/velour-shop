@@ -6,8 +6,17 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 
 const FOOTER_LINKS = [
   { href: "/market", label: "Market" },
+  { href: "/trust", label: "Trust Center" },
   { href: "/buyer-protection", label: "Buyer protection" },
-  { href: "/auth/sign-in", label: "Sign in" },
+  { href: "/status", label: "Status" },
+] as const;
+
+const LEGAL_LINKS = [
+  { href: "/terms", label: "Terms" },
+  { href: "/privacy", label: "Privacy" },
+  { href: "/refund-policy", label: "Refund policy" },
+  { href: "/acceptable-use", label: "Acceptable use" },
+  { href: "/contact", label: "Contact" },
 ] as const;
 
 export function SiteFooter({
@@ -47,9 +56,22 @@ export function SiteFooter({
         </div>
       </div>
       <div className="border-t border-line/60">
-        <p className="mx-auto max-w-7xl px-4 py-4 text-xs text-ink-faint sm:px-6">
-          © {new Date().getFullYear()} Velour · velour.shop · {disclaimer}
-        </p>
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+          <p className="text-xs text-ink-faint">
+            © {new Date().getFullYear()} Velour · velour.shop · {disclaimer}
+          </p>
+          <nav aria-label="Legal" className="flex flex-wrap gap-x-4 gap-y-1">
+            {LEGAL_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className="text-xs text-ink-faint transition-colors hover:text-ink"
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
+        </div>
       </div>
     </footer>
   );

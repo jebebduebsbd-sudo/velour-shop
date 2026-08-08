@@ -1,56 +1,69 @@
 # Velour roadmap
 
-An ordered backlog. Work the topmost unchecked item in **Now** first, ship it as a
-pull request, and tick it off in that same PR. Add newly discovered work to the
-bottom of the right section rather than reordering what's already here.
+Velour is a marketplace for **lawful, authorized, transferable digital goods**
+(gift codes and links, activation keys, prepaid vouchers, gift cards, authorized
+subscription vouchers). Work the topmost unchecked item in **Now** first, ship it
+as a pull request, and tick it off in that PR. Add newly discovered work to the
+bottom of the relevant section.
 
-Items marked **needs a decision** must not be guessed at — open the PR with the
-question instead of inventing an answer.
+Items marked **needs a decision / credentials** must not be guessed at — raise the
+question (and never accept secrets in chat; they belong in server environment
+variables).
+
+## Done
+
+- [x] Design system + storefront (home, market, product, category combobox).
+- [x] Authentication: Argon2id, opaque DB sessions, email verify / reset,
+      rate limiting, lockout, CSRF/origin checks, CSP/HSTS, audit log.
+- [x] Wallet: append-only double-entry ledger; mock payment provider; webhook-only
+      crediting; top-ups; transactions + CSV export.
+- [x] Wallet-only checkout with atomic reservation (no oversell) and encrypted,
+      step-up, masked-by-default delivery.
+- [x] Affiliate program (order-gated, non-withdrawable rewards, refund reversal).
+- [x] Refunds (compensating ledger entries) and disputes.
+- [x] Admin: products/suppliers with compliance gating, policy-checked encrypted
+      inventory import, orders/refunds/disputes/users/reviews, providers, audit.
+- [x] Order-gated reviews (Verified Vouches).
+- [x] Support tickets, saved searches, warranty.
+- [x] English / Bulgarian UI localization.
+- [x] Trust Center, live status page, real recent-purchase notifications.
+- [x] Railway deployment config (`railway.json`, `/api/health`).
 
 ## Now
 
-- [ ] **Resale markup.** Cards currently show Salta7's own prices, so the shop
-      sells at cost. Add a configurable markup (env var, applied in one place in
-      `src/lib/salta7.ts`) and show the customer-facing price everywhere.
-      **Needs a decision:** the multiplier, and whether it varies per product.
-- [ ] **Product detail page** at `/p/[slug]`, linked from each card: full
-      description, warranty, format, live stock, and the buy call-to-action.
-      Note `params` is a Promise in Next 16 and must be awaited.
-- [ ] **Loading and error states.** Add `loading.tsx` (skeleton cards) and
-      `error.tsx` for the storefront so a slow or failing upstream degrades
-      visibly rather than hanging on a blank page.
-- [ ] **Brand basics.** Favicon, OpenGraph image, and per-page metadata.
+- [ ] **Per-product artwork + OpenGraph images**, stored locally and documented in
+      `public/assets/manifest.json`.
+- [ ] **Partial refunds** and **admin wallet adjustments** (require a reason and an
+      audit event; never mutate balances directly — post ledger entries).
+- [ ] **Accessibility + Lighthouse pass**: keyboard focus, contrast, metadata.
+- [ ] **CI**: run lint, typecheck, tests, and build on every PR with a Postgres
+      service.
 
 ## Next
 
-- [ ] **Database layer.** `prisma/schema.prisma` plus a Postgres datasource for
-      the Railway instance, replacing the SQLite adapter currently in
-      `package.json`. `prisma.config.ts` already points at `prisma/schema.prisma`
-      and `prisma/seed.ts`, so Prisma commands fail until both exist.
-      **Needs a decision:** the `DATABASE_URL` for Velour's own database.
-- [ ] **Order records.** An `Order` model written when a purchase completes, so
-      delivered items can be re-shown to the customer later.
-- [ ] **Checkout.** `POST /buy` with `SALTA7_API_TOKEN`, always passing a unique
-      `client_tx_id` so a retry can never double-charge. Handle the documented
-      failures explicitly: 403 insufficient balance, 409 not enough stock, 429
-      rate limited.
-- [ ] **Customer accounts.** Sign-up and sign-in (`bcryptjs` is already a
-      dependency). Sessions must be server-side only.
+- [ ] **Live payment adapters** behind the existing fail-closed interfaces:
+      NOWPayments (public API: invoice + IPN HMAC) and DSK virtual POS.
+      **Needs a decision / credentials:** merchant onboarding, the official DSK
+      integration spec, and provider secrets (set in env, not chat).
+- [ ] **Real email delivery** for verification/reset (currently dev-only links).
+      **Needs a decision:** the email provider.
+- [ ] **Market filters**: price range, delivery type, sorting, pagination.
 
 ## Later
 
-- [ ] Search and category filtering once the catalog outgrows one screen.
-- [ ] Cart for buying several products in one go.
-- [ ] Order history page reading from the `Order` model.
-- [ ] Accessibility and Lighthouse pass: keyboard focus, contrast, metadata.
-- [ ] Tests around the Salta7 client, especially the degraded paths (upstream
-      down, non-numeric stock, admin-only products excluded).
+- [ ] Lawful catalog/supplier sync — read-only, filtered to transferable codes,
+      rejecting anything credential-shaped. **Needs a decision:** a supplier that
+      actually offers such inventory.
+- [ ] Cart / multi-item checkout.
+- [ ] Professional legal review + Bulgarian legal translation of policy pages.
 
 ## Ground rules
 
-- The storefront must keep rendering when the Salta7 API is unreachable. That
-  upstream goes into maintenance, and `fetchCatalog` deliberately never throws.
-- `npm run build` and `npx tsc --noEmit` must both pass before opening a PR.
-- Never commit secrets. `SALTA7_API_TOKEN` and `DATABASE_URL` belong in the host's
-  environment variables; `.env.example` documents them without values.
-- Products flagged `admin_only` by the API stay off the public storefront.
+- Only lawful, transferable goods. Never account credentials, mailbox access,
+  cookies, session tokens, recovery/2FA data, or account-checking tools; the
+  schema and the inventory payload policy enforce this.
+- Money is integer minor units; every ledger transaction sums to zero; refunds
+  are compensating entries, never edits.
+- Wallet credit only from a verified server-to-server webhook, never a redirect.
+- `npm run lint`, `npm run typecheck`, `npm test`, and `npm run build` must pass
+  before opening a PR. Never commit secrets.

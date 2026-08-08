@@ -1,10 +1,12 @@
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import type { ComboboxCategory } from "@/components/category/category-combobox";
+import { RecentPurchaseToast } from "@/components/trust/recent-purchase-toast";
 import { getActiveSession } from "@/lib/auth/session";
 import { getCategorySummaries } from "@/lib/catalog";
 import { CATEGORY_DEFS } from "@/lib/categories";
 import { getMessages } from "@/lib/i18n/server";
+import { getRecentPublicPurchases } from "@/lib/trust/recent-purchases";
 
 // Storefront data (stock counts, live inventory) is read per-request.
 export const dynamic = "force-dynamic";
@@ -35,11 +37,12 @@ async function getHeaderData(): Promise<{
 export default async function PublicLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const [{ categories, totalUnits }, session, { locale, t }] =
+  const [{ categories, totalUnits }, session, { locale, t }, recentPurchases] =
     await Promise.all([
       getHeaderData(),
       getActiveSession().catch(() => null),
       getMessages(),
+      getRecentPublicPurchases().catch(() => []),
     ]);
   return (
     <div className="flex min-h-dvh flex-col">
@@ -64,6 +67,7 @@ export default async function PublicLayout({
         disclaimer={t.footer.disclaimer}
         locale={locale}
       />
+      <RecentPurchaseToast items={recentPurchases} />
     </div>
   );
 }
