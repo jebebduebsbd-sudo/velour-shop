@@ -330,42 +330,112 @@ export async function postPurchaseDebit(
 }
 
 /**
- * Posts a compensating refund transaction that mirrors (negates) the original
- * purchase's postings, restoring the exact cash/promo split the buyer paid and
- * reversing house revenue. Because it negates a set that summed to zero, the
- * refund also sums to zero. Idempotent on the order.
- *
- * Refund amount therefore equals the amount actually paid — it can never exceed
- * it. Returns null when there is nothing to reverse.
+ * Posts a compensating refund transaction for a purchase. Supports partial
+ * refunds: `amountMinor` may be any value from 1 up to the amount actually paid
+ * (it can never exceed it). The refund is returned cash-first, then promotional
+ * balance for any remainder, mirroring how the purchase was funded, and is
+ * balanced against house revenue so the transaction still sums to zero. The
+ * original purchase transaction is never modified. Idempotent on the order.
  */
-export async function postRefundReversal(input: {
+export async function postRefund(input: {
   orderId: string;
   purchaseTransactionId: string;
+  amountMinor: number;
   currency?: string;
   description: string;
   metadata?: Prisma.InputJsonValue;
-}): Promise<{ transactionId: string; applied: boolean } | null> {
+}): Promise<{ transactionId: string; applied: boolean; amountMinor: number } | null> {
   const original = await prisma.ledgerTransaction.findUnique({
     where: { id: input.purchaseTransactionId },
     select: {
       type: true,
-      postings: { select: { accountId: true, amount: true } },
+      postings: {
+        select: { accountId: true, amount: true, account: { select: { kind: true } } },
+      },
     },
   });
   if (!original || original.type !== "PURCHASE") return null;
 
-  const postings = original.postings.map((posting) => ({
-    accountId: posting.accountId,
-    amount: -posting.amount,
-  }));
+  const cash = original.postings.find((p) => p.account.kind === "USER_CASH");
+  const promo = original.postings.find((p) => p.account.kind === "USER_PROMO");
+  const house = original.postings.find(
+    (p) => p.account.kind === "HOUSE_REVENUE",
+  );
+  if (!house) return null;
 
-  return postTransaction(prisma, {
+  const cashPaid = cash ? -cash.amount : 0;
+  const promoPaid = promo ? -promo.amount : 0;
+  const totalPaid = cashPaid + promoPaid;
+
+  // Clamp to (0, totalPaid]: a refund can never exceed what was paid.
+  const amount = Math.min(Math.max(Math.round(input.amountMinor), 1), totalPaid);
+  const refundCash = Math.min(amount, cashPaid);
+  const refundPromo = amount - refundCash;
+
+  const postings: PostingInput[] = [
+    { accountId: house.accountId, amount: -amount },
+  ];
+  if (refundCash > 0 && cash) {
+    postings.push({ accountId: cash.accountId, amount: refundCash });
+  }
+  if (refundPromo > 0 && promo) {
+    postings.push({ accountId: promo.accountId, amount: refundPromo });
+  }
+
+  const result = await postTransaction(prisma, {
     type: "REFUND",
     description: input.description,
     currency: input.currency ?? DEFAULT_CURRENCY,
     idempotencyKey: `refund:${input.orderId}`,
     metadata: input.metadata,
     postings,
+  });
+  return { ...result, amountMinor: amount };
+}
+
+/**
+ * Posts an admin wallet adjustment against the user's cash balance, balanced
+ * to the house funding account. Positive credits, negative debits. A debit can
+ * never drive the wallet below zero (checked under a row lock). This is the
+ * only sanctioned way to adjust a balance — balances are never mutated directly.
+ */
+export async function postAdminAdjustment(input: {
+  userId: string;
+  amountMinor: number;
+  reason: string;
+  currency?: string;
+  metadata?: Prisma.InputJsonValue;
+}): Promise<{ ok: true; transactionId: string } | { ok: false; reason: string }> {
+  if (!Number.isSafeInteger(input.amountMinor) || input.amountMinor === 0) {
+    return { ok: false, reason: "amount must be a non-zero integer" };
+  }
+  const currency = input.currency ?? DEFAULT_CURRENCY;
+  const { cashAccountId, promoAccountId } = await resolveUserSpendableAccounts(
+    input.userId,
+    currency,
+  );
+  const houseFunding = await resolveHouseAccount("HOUSE_FUNDING", currency);
+
+  return prisma.$transaction(async (tx) => {
+    const { cashMinor } = await lockAndReadBalances(
+      tx,
+      cashAccountId,
+      promoAccountId,
+    );
+    if (input.amountMinor < 0 && cashMinor + input.amountMinor < 0) {
+      return { ok: false as const, reason: "would make the balance negative" };
+    }
+    const txn = await postTransaction(tx, {
+      type: "ADMIN_ADJUSTMENT",
+      description: `Admin adjustment — ${input.reason}`.slice(0, 200),
+      currency,
+      metadata: input.metadata,
+      postings: [
+        { accountId: cashAccountId, amount: input.amountMinor },
+        { accountId: houseFunding, amount: -input.amountMinor },
+      ],
+    });
+    return { ok: true as const, transactionId: txn.transactionId };
   });
 }
 

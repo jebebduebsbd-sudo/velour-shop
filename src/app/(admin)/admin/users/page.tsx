@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 
-import { setUserLockAction, setUserRoleAction } from "@/app/(admin)/actions";
+import {
+  adjustWalletAction,
+  setUserLockAction,
+  setUserRoleAction,
+} from "@/app/(admin)/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
@@ -91,11 +95,42 @@ export default async function AdminUsersPage() {
                     </Button>
                   </form>
                 ) : null}
+
+                <form
+                  action={adjustWalletAction}
+                  className="flex w-full items-end gap-2 border-t border-line pt-3 sm:w-auto sm:border-0 sm:pt-0"
+                >
+                  <input type="hidden" name="userId" value={user.id} />
+                  <label className="text-xs text-ink-faint">
+                    Wallet €
+                    <input
+                      name="euros"
+                      placeholder="±0.00"
+                      className="mt-0.5 block h-9 w-20 rounded-md border border-line bg-surface-2 px-2 text-sm text-ink"
+                    />
+                  </label>
+                  <label className="flex-1 text-xs text-ink-faint sm:flex-none">
+                    Reason
+                    <input
+                      name="reason"
+                      placeholder="correction"
+                      className="mt-0.5 block h-9 w-40 rounded-md border border-line bg-surface-2 px-2 text-sm text-ink"
+                    />
+                  </label>
+                  <Button type="submit" variant="secondary" size="sm">
+                    Adjust
+                  </Button>
+                </form>
               </li>
             );
           })}
         </ul>
       </Panel>
+      <p className="text-xs text-ink-faint">
+        Wallet adjustments post a ledger entry (never mutate a balance
+        directly), require a reason, are audited, and cannot drive a balance
+        below zero.
+      </p>
     </div>
   );
 }

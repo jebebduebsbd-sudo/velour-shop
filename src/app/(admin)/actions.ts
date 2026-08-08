@@ -10,6 +10,7 @@ import {
   setUserRole,
   verifySupplierEvidence,
 } from "@/lib/admin/service";
+import { AUDIT_ACTIONS, recordAuditEvent } from "@/lib/audit";
 import { requireRole } from "@/lib/auth/guards";
 import { decideRefund } from "@/lib/orders/refunds";
 import { transitionDispute } from "@/lib/orders/disputes";
@@ -104,10 +105,58 @@ export async function decideRefundAction(formData: FormData): Promise<void> {
   const refundId = String(formData.get("refundId") ?? "");
   const approve = String(formData.get("approve") ?? "") === "true";
   const note = String(formData.get("note") ?? "") || undefined;
+  // Optional partial amount in euros → minor units.
+  const euros = Number.parseFloat(String(formData.get("amount") ?? ""));
+  const amountMinor =
+    Number.isFinite(euros) && euros > 0 ? Math.round(euros * 100) : undefined;
   if (refundId) {
-    await decideRefund({ refundId, approve, decidedById: session.user.id, note });
+    await decideRefund({
+      refundId,
+      approve,
+      decidedById: session.user.id,
+      note,
+      amountMinor,
+    });
   }
   revalidatePath("/admin/refunds");
+}
+
+export async function adjustWalletAction(formData: FormData): Promise<void> {
+  const session = await guard();
+  const schema = z.object({
+    userId: z.string().min(1).max(60),
+    // Signed euros; converted to integer minor units.
+    euros: z
+      .string()
+      .trim()
+      .regex(/^-?\d+(\.\d{1,2})?$/, "Enter an amount like 5 or -2.50"),
+    reason: z.string().trim().min(3, "A reason is required").max(200),
+  });
+  const parsed = schema.safeParse({
+    userId: formData.get("userId"),
+    euros: formData.get("euros"),
+    reason: formData.get("reason"),
+  });
+  if (parsed.success) {
+    const amountMinor = Math.round(Number.parseFloat(parsed.data.euros) * 100);
+    const { postAdminAdjustment } = await import("@/lib/wallet/ledger");
+    const result = await postAdminAdjustment({
+      userId: parsed.data.userId,
+      amountMinor,
+      reason: parsed.data.reason,
+      metadata: { by: session.user.id },
+    });
+    if (result.ok) {
+      await recordAuditEvent({
+        action: AUDIT_ACTIONS.adminAdjustment,
+        userId: session.user.id,
+        targetType: "User",
+        targetId: parsed.data.userId,
+        metadata: { amountMinor, reason: parsed.data.reason },
+      });
+    }
+  }
+  revalidatePath("/admin/users");
 }
 
 export async function transitionDisputeAction(

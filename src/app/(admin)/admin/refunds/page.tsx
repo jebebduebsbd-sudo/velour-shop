@@ -75,10 +75,21 @@ export default async function AdminRefundsPage() {
                     {refund.status.replace(/_/g, " ").toLowerCase()}
                   </Badge>
                   {decidable ? (
-                    <div className="flex gap-2">
-                      <form action={decideRefundAction}>
+                    <div className="flex flex-wrap items-end gap-2">
+                      <form
+                        action={decideRefundAction}
+                        className="flex items-end gap-2"
+                      >
                         <input type="hidden" name="refundId" value={refund.id} />
                         <input type="hidden" name="approve" value="true" />
+                        <label className="text-xs text-ink-faint">
+                          Amount €
+                          <input
+                            name="amount"
+                            placeholder={(refund.amountMinor / 100).toFixed(2)}
+                            className="mt-0.5 block h-9 w-20 rounded-md border border-line bg-surface-2 px-2 text-sm text-ink"
+                          />
+                        </label>
                         <Button type="submit" variant="primary" size="sm">
                           Approve
                         </Button>

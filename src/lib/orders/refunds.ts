@@ -2,7 +2,7 @@ import { reverseRewardForOrder } from "@/lib/affiliate/service";
 import { AUDIT_ACTIONS, recordAuditEvent } from "@/lib/audit";
 import type { RefundStatus } from "@/generated/prisma/enums";
 import { prisma } from "@/lib/prisma";
-import { postRefundReversal } from "@/lib/wallet/ledger";
+import { postRefund } from "@/lib/wallet/ledger";
 
 /**
  * Refunds. A refund never edits the original purchase transaction — it posts a
@@ -125,6 +125,8 @@ export async function processRefund(input: {
   refundId: string;
   decidedById?: string;
   note?: string;
+  /** Optional partial amount (minor units). Defaults to the refund's full amount. */
+  amountMinor?: number;
 }): Promise<{ ok: boolean }> {
   const refund = await prisma.refund.findUnique({
     where: { id: input.refundId },
@@ -132,9 +134,11 @@ export async function processRefund(input: {
       id: true,
       status: true,
       currency: true,
+      amountMinor: true,
       order: {
         select: {
           id: true,
+          priceMinor: true,
           ledgerTxnId: true,
           firstRevealedAt: true,
           inventoryUnitId: true,
@@ -145,11 +149,18 @@ export async function processRefund(input: {
   if (!refund || refund.status === "PROCESSED") return { ok: false };
   if (!refund.order.ledgerTxnId) return { ok: false };
 
-  const reversal = await postRefundReversal({
+  // Determine the refund amount: an explicit partial amount (capped to the
+  // paid amount) or the full order price.
+  const requested = input.amountMinor ?? refund.order.priceMinor;
+  const amount = Math.min(Math.max(Math.round(requested), 1), refund.order.priceMinor);
+  const isFull = amount >= refund.order.priceMinor;
+
+  const reversal = await postRefund({
     orderId: refund.order.id,
     purchaseTransactionId: refund.order.ledgerTxnId,
+    amountMinor: amount,
     currency: refund.currency,
-    description: "Refund",
+    description: isFull ? "Refund" : "Partial refund",
     metadata: { refundId: refund.id },
   });
 
@@ -158,6 +169,7 @@ export async function processRefund(input: {
       where: { id: refund.id },
       data: {
         status: "PROCESSED",
+        amountMinor: reversal?.amountMinor ?? amount,
         ledgerTxnId: reversal?.transactionId,
         decidedById: input.decidedById,
         resolutionNote: input.note,
@@ -166,12 +178,19 @@ export async function processRefund(input: {
     await tx.order.update({
       where: { id: refund.order.id },
       data: {
-        status: "REFUNDED",
-        events: { create: { status: "REFUNDED", note: "Refund processed" } },
+        // Only a full refund moves the order to REFUNDED; a partial refund
+        // keeps it FULFILLED with a recorded event.
+        status: isFull ? "REFUNDED" : undefined,
+        events: {
+          create: {
+            status: isFull ? "REFUNDED" : "FULFILLED",
+            note: isFull ? "Refund processed" : "Partial refund processed",
+          },
+        },
       },
     });
-    // Restock only if the code was never revealed; a revealed code is consumed.
-    if (!refund.order.firstRevealedAt && refund.order.inventoryUnitId) {
+    // Restock only on a full refund of a never-revealed code.
+    if (isFull && !refund.order.firstRevealedAt && refund.order.inventoryUnitId) {
       await tx.inventoryUnit.update({
         where: { id: refund.order.inventoryUnitId },
         data: { status: "AVAILABLE", soldAt: null },
@@ -179,31 +198,36 @@ export async function processRefund(input: {
     }
   });
 
-  // Reverse any affiliate reward tied to this order (claws back if credited).
-  await reverseRewardForOrder(refund.order.id).catch(() => undefined);
+  // Reverse the affiliate reward only on a full refund.
+  if (isFull) {
+    await reverseRewardForOrder(refund.order.id).catch(() => undefined);
+  }
 
   await recordAuditEvent({
     action: AUDIT_ACTIONS.walletRefund,
     userId: input.decidedById ?? null,
     targetType: "Refund",
     targetId: refund.id,
+    metadata: { amountMinor: amount, full: isFull },
   });
 
   return { ok: true };
 }
 
-/** Staff decision on a manually-reviewed refund. */
+/** Staff decision on a manually-reviewed refund (optionally a partial amount). */
 export async function decideRefund(input: {
   refundId: string;
   approve: boolean;
   decidedById: string;
   note?: string;
+  amountMinor?: number;
 }): Promise<{ ok: boolean }> {
   if (input.approve) {
     return processRefund({
       refundId: input.refundId,
       decidedById: input.decidedById,
       note: input.note,
+      amountMinor: input.amountMinor,
     });
   }
   await prisma.refund.updateMany({
