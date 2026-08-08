@@ -1,9 +1,6 @@
-import {
-  DskVirtualPosProvider,
-  NowPaymentsProvider,
-  OvgcProvider,
-} from "@/lib/payments/disabled-adapters";
+import { DskVirtualPosProvider, OvgcProvider } from "@/lib/payments/disabled-adapters";
 import { MockPaymentProvider } from "@/lib/payments/mock-provider";
+import { NowPaymentsProvider } from "@/lib/payments/nowpayments-provider";
 import type {
   PaymentProvider,
   PublicProviderInfo,
@@ -13,6 +10,9 @@ import type {
  * Server-only registry of payment providers. Real providers are disabled by
  * default and only surface when enabled AND configured; the mock provider is
  * available outside production. The UI must render only enabled providers.
+ *
+ * NOWPayments is a real adapter (enabled only with flag + credentials). DSK and
+ * OVGC remain disabled scaffolds pending their integration docs / onboarding.
  */
 const PROVIDERS: PaymentProvider[] = [
   new MockPaymentProvider(),

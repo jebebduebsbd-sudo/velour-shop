@@ -31,6 +31,9 @@ const serverEnvSchema = z.object({
   PAYMENT_OVGC_ENABLED: z.enum(["true", "false"]).default("false"),
   /** Shared secret used to verify mock/dev webhook signatures. */
   PAYMENT_WEBHOOK_SECRET: z.string().min(16).optional(),
+  /** NOWPayments credentials (server-only). Required to enable that provider. */
+  NOWPAYMENTS_API_KEY: z.string().min(8).optional(),
+  NOWPAYMENTS_IPN_SECRET: z.string().min(8).optional(),
   /**
    * 32-byte base64 master key for deliverable encryption. Optional until the
    * delivery phase, but validated for shape whenever present.

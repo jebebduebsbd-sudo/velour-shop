@@ -85,17 +85,6 @@ export class DskVirtualPosProvider extends DisabledProvider {
   }
 }
 
-/** NOWPayments crypto invoices. Disabled until onboarded + sandbox-verified. */
-export class NowPaymentsProvider extends DisabledProvider {
-  readonly id = "nowpayments";
-  readonly displayName = "Crypto (NOWPayments)";
-  readonly description = "Pay with crypto; wallet credited after confirmation.";
-  readonly kind = "crypto" as const;
-  protected flagEnabled(): boolean {
-    return process.env.PAYMENT_NOWPAYMENTS_ENABLED === "true";
-  }
-}
-
 /** OVGC vouchers. Kept disabled pending onboarding and acceptable-use review. */
 export class OvgcProvider extends DisabledProvider {
   readonly id = "ovgc";
