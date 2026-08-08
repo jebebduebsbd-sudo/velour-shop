@@ -7,9 +7,11 @@ import { randomUUID } from "node:crypto";
 import { PlatformMark, PlatformTile } from "@/components/icons/platform-mark";
 import { ProductCard } from "@/components/market/product-card";
 import { PurchasePanel } from "@/components/product/purchase-panel";
+import { ProductReviewsPanel } from "@/components/reviews/product-reviews";
 import { Panel } from "@/components/ui/panel";
 import { getActiveSession } from "@/lib/auth/session";
 import { getProductBySlug, getRelatedProducts } from "@/lib/catalog";
+import { getProductReviews } from "@/lib/reviews/service";
 import { getWalletBalance } from "@/lib/wallet/ledger";
 
 export async function generateMetadata(
@@ -29,10 +31,14 @@ export default async function ProductPage(props: PageProps<"/product/[slug]">) {
   const product = await getProductBySlug(slug).catch(() => null);
   if (!product) notFound();
 
-  const related = await getRelatedProducts(
-    product.categorySlug,
-    product.id,
-  ).catch(() => []);
+  const [related, reviews] = await Promise.all([
+    getRelatedProducts(product.categorySlug, product.id).catch(() => []),
+    getProductReviews(product.id).catch(() => ({
+      average: null,
+      count: 0,
+      reviews: [],
+    })),
+  ]);
 
   const session = await getActiveSession().catch(() => null);
   let viewer:
@@ -151,6 +157,8 @@ export default async function ProductPage(props: PageProps<"/product/[slug]">) {
               Read the full Buyer Protection policy →
             </Link>
           </Panel>
+
+          <ProductReviewsPanel data={reviews} />
         </div>
 
         <aside aria-label="Purchase" className="lg:sticky lg:top-24 lg:self-start">

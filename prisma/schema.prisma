@@ -47,6 +47,7 @@ model User {
   refunds          Refund[]
   disputes         Dispute[]
   disputeMessages  DisputeMessage[]
+  reviews          Review[]
 
   @@index([role])
   @@index([referredById])
@@ -379,6 +380,7 @@ model Product {
   updatedAt   DateTime        @updatedAt
   units       InventoryUnit[]
   orders      Order[]
+  reviews     Review[]
 
   @@index([categoryId, status])
   @@index([featured, status])
@@ -442,6 +444,7 @@ model Order {
   events          OrderEvent[]
   refund          Refund?
   dispute         Dispute?
+  review          Review?
 
   @@index([userId, createdAt])
   @@index([status])
@@ -456,6 +459,32 @@ model OrderEvent {
   createdAt DateTime    @default(now())
 
   @@index([orderId, createdAt])
+}
+
+enum ReviewStatus {
+  PUBLISHED
+  HIDDEN
+}
+
+/// A "Verified Vouch" — always tied to a real fulfilled order, so reviews can
+/// never be seller-created or posted without a qualifying purchase. Moderation
+/// can only hide (for policy reasons); the rating/body is never rewritten.
+model Review {
+  id        String       @id @default(cuid())
+  orderId   String       @unique
+  order     Order        @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product      @relation(fields: [productId], references: [id], onDelete: Cascade)
+  rating    Int
+  body      String
+  status    ReviewStatus @default(PUBLISHED)
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  @@index([productId, status])
+  @@index([userId])
 }
 
 enum RefundStatus {

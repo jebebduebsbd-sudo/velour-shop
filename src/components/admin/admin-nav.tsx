@@ -8,6 +8,7 @@ import {
   RotateCcw,
   ScrollText,
   ShoppingBag,
+  Star,
   Truck,
   Users,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const LINKS = [
   { href: "/admin/orders", label: "Orders", icon: ShoppingBag, exact: false },
   { href: "/admin/refunds", label: "Refunds", icon: RotateCcw, exact: false },
   { href: "/admin/disputes", label: "Disputes", icon: MessageSquareWarning, exact: false },
+  { href: "/admin/reviews", label: "Reviews", icon: Star, exact: false },
   { href: "/admin/users", label: "Users", icon: Users, exact: false },
   { href: "/admin/providers", label: "Providers", icon: ClipboardList, exact: false },
   { href: "/admin/audit", label: "Audit log", icon: ScrollText, exact: false },

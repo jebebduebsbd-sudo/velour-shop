@@ -95,3 +95,34 @@ export async function postDisputeMessageAction(
   });
   redirect(`/disputes/${parsed.data.disputeId}`);
 }
+
+const reviewSchema = z.object({
+  orderId: z.string().min(1).max(60),
+  rating: z.coerce.number().int().min(1).max(5),
+  body: z.string().trim().min(3, "Add a short review").max(2000),
+});
+
+export async function submitReviewAction(formData: FormData): Promise<void> {
+  const parsed = reviewSchema.safeParse({
+    orderId: formData.get("orderId"),
+    rating: formData.get("rating"),
+    body: formData.get("body"),
+  });
+  if (!parsed.success) {
+    const orderId = String(formData.get("orderId") ?? "");
+    redirect(`/orders/${orderId}?review=invalid`);
+  }
+
+  await assertSameOrigin();
+  const session = await requireSession("/orders");
+  const { submitReview } = await import("@/lib/reviews/service");
+  const result = await submitReview({
+    userId: session.user.id,
+    orderId: parsed.data.orderId,
+    rating: parsed.data.rating,
+    body: parsed.data.body,
+  });
+  redirect(
+    `/orders/${parsed.data.orderId}?review=${result.ok ? "thanks" : result.reason}`,
+  );
+}

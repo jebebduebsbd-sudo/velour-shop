@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { OrderSupportActions } from "@/components/orders/order-support-actions";
+import { ReviewForm } from "@/components/orders/review-form";
 import { RevealDeliverable } from "@/components/orders/reveal-deliverable";
 import { Badge } from "@/components/ui/badge";
 import { Panel } from "@/components/ui/panel";
@@ -27,7 +28,7 @@ export default async function OrderDetailPage(
   const order = await getUserOrder(session.user.id, id);
   if (!order) notFound();
 
-  const [existingRefund, existingDispute] = await Promise.all([
+  const [existingRefund, existingDispute, existingReview] = await Promise.all([
     prisma.refund.findUnique({
       where: { orderId: order.id },
       select: { id: true, status: true },
@@ -36,9 +37,15 @@ export default async function OrderDetailPage(
       where: { orderId: order.id },
       select: { id: true },
     }),
+    prisma.review.findUnique({
+      where: { orderId: order.id },
+      select: { id: true, rating: true },
+    }),
   ]);
   const notice =
     typeof searchParams.refund === "string" ? searchParams.refund : undefined;
+  const reviewNotice =
+    typeof searchParams.review === "string" ? searchParams.review : undefined;
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
@@ -128,6 +135,30 @@ export default async function OrderDetailPage(
           disputeId={existingDispute?.id ?? null}
           notice={notice}
         />
+
+        {order.fulfilled ? (
+          <div className="mt-6 rounded-md border border-line p-4">
+            <h2 className="text-sm font-semibold text-ink">Leave a review</h2>
+            {existingReview ? (
+              <p className="mt-2 text-sm text-ink-muted">
+                Thanks — you rated this {existingReview.rating}/5. Your verified
+                vouch is published on the product page.
+              </p>
+            ) : reviewNotice === "thanks" ? (
+              <p className="mt-2 text-sm text-success">
+                Thanks for your review!
+              </p>
+            ) : (
+              <>
+                <p className="mt-1 text-xs text-ink-faint">
+                  Only buyers of a fulfilled order can review — your vouch is
+                  marked verified.
+                </p>
+                <ReviewForm orderId={order.id} />
+              </>
+            )}
+          </div>
+        ) : null}
       </Panel>
     </div>
   );

@@ -167,6 +167,18 @@ export async function setUserLockAction(formData: FormData): Promise<void> {
   revalidatePath("/admin/users");
 }
 
+export async function setReviewStatusAction(formData: FormData): Promise<void> {
+  await guard();
+  const reviewId = String(formData.get("reviewId") ?? "");
+  const status = String(formData.get("status") ?? "");
+  const parsed = z.enum(["PUBLISHED", "HIDDEN"]).safeParse(status);
+  if (reviewId && parsed.success) {
+    const { setReviewStatus } = await import("@/lib/reviews/service");
+    await setReviewStatus({ reviewId, status: parsed.data });
+  }
+  revalidatePath("/admin/reviews");
+}
+
 export async function setUserRoleAction(formData: FormData): Promise<void> {
   const session = await guard();
   const userId = String(formData.get("userId") ?? "");
