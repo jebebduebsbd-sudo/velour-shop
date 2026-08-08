@@ -48,9 +48,59 @@ model User {
   disputes         Dispute[]
   disputeMessages  DisputeMessage[]
   reviews          Review[]
+  supportTickets   SupportTicket[]
+  ticketMessages   TicketMessage[]
+  savedSearches    SavedSearch[]
 
   @@index([role])
   @@index([referredById])
+}
+
+enum TicketStatus {
+  OPEN
+  PENDING_SUPPORT
+  PENDING_CUSTOMER
+  RESOLVED
+  CLOSED
+}
+
+model SupportTicket {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject   String
+  status    TicketStatus    @default(OPEN)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  messages  TicketMessage[]
+
+  @@index([userId, status])
+  @@index([status])
+}
+
+model TicketMessage {
+  id         String        @id @default(cuid())
+  ticketId   String
+  ticket     SupportTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String
+  author     User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  authorRole Role
+  body       String
+  createdAt  DateTime      @default(now())
+
+  @@index([ticketId, createdAt])
+}
+
+model SavedSearch {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label        String
+  categorySlug String?
+  query        String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 // ---------------------------------------------------------------------------
