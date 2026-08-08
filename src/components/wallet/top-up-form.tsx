@@ -9,6 +9,7 @@ import {
 } from "@/app/(customer)/wallet/actions";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import { estimateFeeMinor } from "@/lib/payments/fees";
 import type { PublicProviderInfo } from "@/lib/payments/provider";
 import { formatMinor } from "@/lib/format";
 
@@ -20,13 +21,6 @@ const KIND_ICON = {
   crypto: Bitcoin,
   voucher: Ticket,
 } as const;
-
-/** Client-side fee preview mirrors the mock provider's 1.5% for the summary. */
-function estimateFeeMinor(amountMinor: number, kind: string): number {
-  if (kind === "crypto") return Math.round(amountMinor * 0.01);
-  if (kind === "voucher") return Math.round(amountMinor * 0.02);
-  return Math.round(amountMinor * 0.015);
-}
 
 export function TopUpForm({
   providers,

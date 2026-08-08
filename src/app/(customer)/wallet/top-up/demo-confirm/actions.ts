@@ -29,6 +29,11 @@ export async function simulateProviderCallbackAction(
 
   const ref = String(formData.get("ref") ?? "");
   const amountMinor = Number.parseInt(String(formData.get("amount") ?? "0"), 10);
+  // Only the demo providers use this local confirmation flow.
+  const providerId =
+    String(formData.get("provider") ?? "mock") === "mock-crypto"
+      ? "mock-crypto"
+      : "mock";
   if (!ref || !Number.isFinite(amountMinor) || amountMinor <= 0) {
     redirect("/wallet/top-up");
   }
@@ -44,7 +49,7 @@ export async function simulateProviderCallbackAction(
   const signature = MockPaymentProvider.signBody(body, paymentWebhookSecret());
 
   await completeTopUpFromWebhook({
-    providerId: "mock",
+    providerId,
     rawBody: body,
     signature,
   });

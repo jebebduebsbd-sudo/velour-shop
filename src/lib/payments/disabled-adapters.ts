@@ -1,3 +1,4 @@
+import { estimateFeeMinor } from "@/lib/payments/fees";
 import type {
   FeeEstimate,
   PaymentProvider,
@@ -55,7 +56,8 @@ abstract class DisabledProvider implements PaymentProvider {
   }
 
   getFeeEstimate(amountMinor: number): FeeEstimate {
-    return { feeMinor: 0, totalChargedMinor: amountMinor };
+    const feeMinor = estimateFeeMinor(amountMinor, this.kind);
+    return { feeMinor, totalChargedMinor: amountMinor + feeMinor };
   }
 
   createTopUp(): Promise<TopUpSession> {

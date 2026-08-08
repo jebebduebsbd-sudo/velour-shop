@@ -1,6 +1,7 @@
 import { createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 
 import { paymentWebhookSecret } from "@/lib/env";
+import { estimateFeeMinor } from "@/lib/payments/fees";
 import type {
   FeeEstimate,
   PaymentProvider,
@@ -10,17 +11,34 @@ import type {
   WebhookVerification,
 } from "@/lib/payments/provider";
 
+type MockConfig = {
+  id: string;
+  displayName: string;
+  description: string;
+  kind: PaymentProvider["kind"];
+};
+
 /**
  * Development payment provider. It never touches a real payment network:
  * createTopUp returns a local confirmation page, and a "paid" event is only
  * accepted through the signed webhook. It exists so the entire wallet flow —
- * including strict webhook-only crediting — is exercisable without secrets.
+ * including strict webhook-only crediting and the per-rail fee — is exercisable
+ * without secrets. Configurable so we can present both a card and a crypto
+ * demo method with their respective fees.
  */
 export class MockPaymentProvider implements PaymentProvider {
-  readonly id = "mock";
-  readonly displayName = "Demo checkout";
-  readonly description = "Local test payments — no real charge is made.";
-  readonly kind = "card" as const;
+  readonly id: string;
+  readonly displayName: string;
+  readonly description: string;
+  readonly kind: PaymentProvider["kind"];
+
+  constructor(config?: Partial<MockConfig>) {
+    this.id = config?.id ?? "mock";
+    this.displayName = config?.displayName ?? "Demo card checkout";
+    this.description =
+      config?.description ?? "Local test card payment — no real charge is made.";
+    this.kind = config?.kind ?? "card";
+  }
 
   isEnabled(): boolean {
     // Available anywhere except production.
@@ -40,23 +58,17 @@ export class MockPaymentProvider implements PaymentProvider {
   }
 
   getFeeEstimate(amountMinor: number): FeeEstimate {
-    // Flat demo fee so the fee-disclosure UI has something to show.
-    const feeMinor = Math.round(amountMinor * 0.015);
+    const feeMinor = estimateFeeMinor(amountMinor, this.kind);
     return { feeMinor, totalChargedMinor: amountMinor + feeMinor };
   }
 
   async createTopUp(request: TopUpRequest): Promise<TopUpSession> {
-    const providerReference = `mock_${randomBytes(9).toString("hex")}`;
+    const providerReference = `${this.id}_${randomBytes(9).toString("hex")}`;
     const { feeMinor } = this.getFeeEstimate(request.amountMinor);
     // The "redirect" is a local confirmation page that triggers a signed
     // webhook to this app — mirroring a real hosted-checkout round trip.
-    const redirectUrl = `/wallet/top-up/demo-confirm?ref=${providerReference}&amount=${request.amountMinor}`;
-    return {
-      providerReference,
-      redirectUrl,
-      feeMinor,
-      status: "pending",
-    };
+    const redirectUrl = `/wallet/top-up/demo-confirm?ref=${providerReference}&amount=${request.amountMinor}&provider=${this.id}`;
+    return { providerReference, redirectUrl, feeMinor, status: "pending" };
   }
 
   async verifyWebhook(
@@ -116,5 +128,17 @@ export class MockPaymentProvider implements PaymentProvider {
   /** Test/dev helper: signs a webhook body the way the provider would. */
   static signBody(rawBody: string, secret: string): string {
     return createHmac("sha256", secret).update(rawBody).digest("hex");
+  }
+}
+
+/** Dev-only crypto demo method, so both fee tiers are visible end to end. */
+export class MockCryptoProvider extends MockPaymentProvider {
+  constructor() {
+    super({
+      id: "mock-crypto",
+      displayName: "Demo crypto checkout",
+      description: "Local test crypto payment — no real charge is made.",
+      kind: "crypto",
+    });
   }
 }

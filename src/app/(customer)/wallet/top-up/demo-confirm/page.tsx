@@ -34,6 +34,7 @@ export default async function DemoConfirmPage(
 
   const params = await props.searchParams;
   const ref = typeof params.ref === "string" ? params.ref : "";
+  const providerId = typeof params.provider === "string" ? params.provider : "mock";
   const amountMinor =
     typeof params.amount === "string" ? Number.parseInt(params.amount, 10) : 0;
 
@@ -68,6 +69,7 @@ export default async function DemoConfirmPage(
         <form action={simulateProviderCallbackAction} className="mt-6">
           <input type="hidden" name="ref" value={ref} />
           <input type="hidden" name="amount" value={amountMinor} />
+          <input type="hidden" name="provider" value={providerId} />
           <button
             type="submit"
             className={buttonClasses("primary", "lg", "w-full")}

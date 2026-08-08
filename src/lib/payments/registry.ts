@@ -1,5 +1,5 @@
 import { DskVirtualPosProvider, OvgcProvider } from "@/lib/payments/disabled-adapters";
-import { MockPaymentProvider } from "@/lib/payments/mock-provider";
+import { MockCryptoProvider, MockPaymentProvider } from "@/lib/payments/mock-provider";
 import { NowPaymentsProvider } from "@/lib/payments/nowpayments-provider";
 import type {
   PaymentProvider,
@@ -16,6 +16,7 @@ import type {
  */
 const PROVIDERS: PaymentProvider[] = [
   new MockPaymentProvider(),
+  new MockCryptoProvider(),
   new DskVirtualPosProvider(),
   new NowPaymentsProvider(),
   new OvgcProvider(),

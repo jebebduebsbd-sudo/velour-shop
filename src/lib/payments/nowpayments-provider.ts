@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 
 import { serverEnv } from "@/lib/env";
+import { estimateFeeMinor } from "@/lib/payments/fees";
 import type {
   FeeEstimate,
   PaymentProvider,
@@ -59,9 +60,9 @@ export class NowPaymentsProvider implements PaymentProvider {
   }
 
   getFeeEstimate(amountMinor: number): FeeEstimate {
-    // Network/processor fees are charged to the payer by NOWPayments, not added
-    // to the wallet credit, so nothing extra is shown here.
-    return { feeMinor: 0, totalChargedMinor: amountMinor };
+    // Platform crypto fee (1.5%) added on top of the wallet credit.
+    const feeMinor = estimateFeeMinor(amountMinor, "crypto");
+    return { feeMinor, totalChargedMinor: amountMinor + feeMinor };
   }
 
   async createTopUp(request: TopUpRequest): Promise<TopUpSession> {
