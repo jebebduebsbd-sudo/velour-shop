@@ -29,6 +29,12 @@ export default function ContactPage() {
         password, and you should not share delivered codes unless a reviewer
         explicitly requests proof.
       </p>
+      <p>
+        <strong>The community is not a support channel</strong> — posting there
+        does not open a ticket or pause a case deadline. See the{" "}
+        <Link href="/community">community guidelines</Link> for what it is good
+        for, and how to spot someone impersonating staff.
+      </p>
     </PolicyPage>
   );
 }

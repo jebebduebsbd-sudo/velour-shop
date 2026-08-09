@@ -7,6 +7,12 @@ import { z } from "zod";
  * configuration (none yet) must use a separate schema and the NEXT_PUBLIC_
  * prefix; server secrets must never be serialized to the client.
  */
+/** Treats an empty string the same as an unset variable. */
+const optionalUrl = z.preprocess(
+  (value) => (typeof value === "string" && value.trim() === "" ? undefined : value),
+  z.string().url().optional(),
+);
+
 const serverEnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
@@ -34,6 +40,14 @@ const serverEnvSchema = z.object({
   /** NOWPayments credentials (server-only). Required to enable that provider. */
   NOWPAYMENTS_API_KEY: z.string().min(8).optional(),
   NOWPAYMENTS_IPN_SECRET: z.string().min(8).optional(),
+  /**
+   * Public invite links for the Velour community spaces. Unset means the space
+   * is not published yet; the community page then says so instead of linking
+   * somewhere unverified.
+   */
+  COMMUNITY_DISCORD_URL: optionalUrl,
+  COMMUNITY_TELEGRAM_URL: optionalUrl,
+
   /**
    * 32-byte base64 master key for deliverable encryption. Optional until the
    * delivery phase, but validated for shape whenever present.

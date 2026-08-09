@@ -27,6 +27,9 @@ variables).
 - [x] Support tickets, saved searches, warranty.
 - [x] English / Bulgarian UI localization.
 - [x] Trust Center, live status page, real recent-purchase notifications.
+- [x] Community description and guidelines (`/community`), mirrored for off-site
+      profiles in `docs/community-description.md`; invite links come from server
+      configuration, never hardcoded.
 - [x] Railway deployment config (`railway.json`, `/api/health`).
 
 ## Now

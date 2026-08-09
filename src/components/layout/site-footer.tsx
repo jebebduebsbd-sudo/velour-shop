@@ -7,6 +7,7 @@ import { DEFAULT_LOCALE, type Locale } from "@/lib/i18n/config";
 const FOOTER_LINKS = [
   { href: "/market", label: "Market" },
   { href: "/trust", label: "Trust Center" },
+  { href: "/community", label: "Community" },
   { href: "/buyer-protection", label: "Buyer protection" },
   { href: "/status", label: "Status" },
 ] as const;

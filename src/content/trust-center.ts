@@ -70,6 +70,13 @@ export const TRUST_CENTER = {
       linkLabel: "Acceptable use",
     },
     {
+      id: "community",
+      title: "Community",
+      body: "A public discussion space with published rules, named moderation steps, and a hard boundary: orders, refunds, and disputes are settled in your account, never in chat.",
+      href: "/community",
+      linkLabel: "Community guidelines",
+    },
+    {
       id: "support",
       title: "Contact support",
       body: "Open a ticket from your account, or a refund/dispute directly on the order. Support never asks for your password.",
