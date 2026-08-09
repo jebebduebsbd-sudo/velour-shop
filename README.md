@@ -52,6 +52,9 @@ Storefront, authentication, and the wallet ledger are implemented:
   password re-auth; deliverable masked by default and never written to logs
 - Purchases list + order detail pages; catalog priced in EUR to match the
   wallet
+- Community page (`/community`): the published description, space guide,
+  rules, roles, moderation ladder, and anti-impersonation notes, with invite
+  links driven by server configuration instead of hardcoded URLs
 - PostgreSQL schema (accounts, sessions, email tokens, audit events, rate
   limits, catalog, ledger, top-ups, webhook events) with encrypted-at-rest
   demo inventory payloads
@@ -138,6 +141,8 @@ startup by `src/lib/env.ts` (Zod).
 | `PAYMENT_DSK_ENABLED` | optional | `true` to enable the DSK card adapter once configured |
 | `PAYMENT_NOWPAYMENTS_ENABLED` | optional | `true` to enable the NOWPayments adapter once configured |
 | `PAYMENT_OVGC_ENABLED` | optional | `true` to enable the OVGC adapter once configured |
+| `COMMUNITY_DISCORD_URL` | optional | https invite shown on `/community`; unset means the space is presented as unpublished |
+| `COMMUNITY_TELEGRAM_URL` | optional | Same, for the Telegram space |
 
 Production startup rejects missing `SESSION_SECRET` or `EMAIL_TOKEN_PEPPER`;
 development falls back to clearly-marked local values. Never commit real
