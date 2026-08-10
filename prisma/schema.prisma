@@ -426,12 +426,16 @@ model Product {
   featured    Boolean         @default(false)
   supplierId  String?
   supplier    Supplier?       @relation(fields: [supplierId], references: [id])
+  /// Supplier-side identifier for feed-synced products. Paired with supplierId
+  /// it makes catalogue sync idempotent. Null for hand-created products.
+  externalId  String?
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
   units       InventoryUnit[]
   orders      Order[]
   reviews     Review[]
 
+  @@unique([supplierId, externalId])
   @@index([categoryId, status])
   @@index([featured, status])
 }

@@ -16,6 +16,7 @@ import { decideRefund } from "@/lib/orders/refunds";
 import { transitionDispute } from "@/lib/orders/disputes";
 import { prisma } from "@/lib/prisma";
 import { assertSameOrigin } from "@/lib/request";
+import { syncSupplierFeed } from "@/lib/suppliers/sync";
 
 /** Every admin action re-checks ADMIN and same-origin server-side. */
 async function guard() {
@@ -88,6 +89,48 @@ export async function linkProductSupplierAction(
     });
   }
   revalidatePath("/admin/products");
+}
+
+export type FeedSyncState =
+  | { status: "idle" }
+  | { status: "error"; message: string }
+  | {
+      status: "ok";
+      message: string;
+      rejected: { ref: string; reason: string }[];
+      supplierVerified: boolean;
+    };
+
+/**
+ * Pulls the configured supplier feed into the catalogue. Synced products land
+ * in COMPLIANCE_REVIEW — this never publishes anything on its own.
+ */
+export async function syncSupplierFeedAction(
+  _previous: FeedSyncState,
+  formData: FormData,
+): Promise<FeedSyncState> {
+  const session = await guard();
+  const supplierId = String(formData.get("supplierId") ?? "");
+  if (!supplierId) {
+    return { status: "error", message: "Choose a supplier to sync into." };
+  }
+
+  const result = await syncSupplierFeed({
+    supplierId,
+    actorId: session.user.id,
+  });
+  revalidatePath("/admin/suppliers");
+  revalidatePath("/admin/products");
+
+  if (!result.ok) return { status: "error", message: result.reason };
+
+  const { summary } = result;
+  return {
+    status: "ok",
+    message: `Read ${summary.fetched} listing(s): ${summary.created} added, ${summary.updated} updated, ${summary.rejected.length} rejected. Codes: ${summary.unitsImported} stocked, ${summary.unitsSkipped} skipped.`,
+    rejected: summary.rejected.slice(0, 25),
+    supplierVerified: summary.supplierVerified,
+  };
 }
 
 export async function importInventoryAction(formData: FormData): Promise<void> {

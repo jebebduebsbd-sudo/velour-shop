@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
 
 import { createSupplierAction, verifySupplierAction } from "@/app/(admin)/actions";
+import { FeedSyncPanel } from "@/components/admin/feed-sync-panel";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { prisma } from "@/lib/prisma";
+import { defaultFeedProvider } from "@/lib/suppliers/registry";
 
 export const metadata: Metadata = {
   title: "Admin — suppliers",
@@ -24,6 +26,9 @@ export default async function AdminSuppliersPage() {
     },
   });
 
+  const feedProvider = defaultFeedProvider();
+  const feedEnabled = feedProvider.isEnabled();
+
   return (
     <div className="space-y-6">
       <div>
@@ -36,6 +41,16 @@ export default async function AdminSuppliersPage() {
           rights. Only suppliers with verified evidence can back active products.
         </p>
       </div>
+
+      <FeedSyncPanel
+        enabled={feedEnabled}
+        disabledReason={feedEnabled ? "" : feedProvider.disabledReason()}
+        suppliers={suppliers.map((supplier) => ({
+          id: supplier.id,
+          name: supplier.name,
+          evidenceVerified: supplier.evidenceVerified,
+        }))}
+      />
 
       <Panel className="p-6">
         <h2 className="text-sm font-semibold text-ink">Add a supplier</h2>

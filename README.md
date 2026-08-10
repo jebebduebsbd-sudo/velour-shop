@@ -52,6 +52,9 @@ Storefront, authentication, and the wallet ledger are implemented:
   password re-auth; deliverable masked by default and never written to logs
 - Purchases list + order detail pages; catalog priced in EUR to match the
   wallet
+- Read-only supplier catalogue sync behind an API token: allowlisted to
+  transferable code types, credential-shaped listings rejected with a reason,
+  synced products held in compliance review, idempotent on repeat runs
 - PostgreSQL schema (accounts, sessions, email tokens, audit events, rate
   limits, catalog, ledger, top-ups, webhook events) with encrypted-at-rest
   demo inventory payloads
@@ -78,6 +81,53 @@ mock provider (development) is offered, and every real adapter fails closed.
 Wallet credit is created only by a verified server-to-server webhook at
 `/api/webhooks/payment/[provider]` — never from a browser redirect or success
 page.
+
+### Supplier catalogue sync
+
+An admin can pull a supplier's listings into the catalogue from
+**Admin → Suppliers → Catalogue feed**. The integration is read-only,
+server-only, and disabled until it is configured:
+
+| Variable | Purpose |
+| --- | --- |
+| `SUPPLIER_SYNC_ENABLED` | `true` to arm the feed adapter |
+| `SUPPLIER_FEED_URL` | HTTPS endpoint returning the supplier's listings |
+| `SUPPLIER_API_TOKEN` | Bearer token, server environment only |
+| `SUPPLIER_AUTH_HEADER` | Optional custom header name (e.g. `X-Api-Key`) |
+| `SUPPLIER_FEED_DEFAULT_CATEGORY` | Category slug for listings that name none |
+
+The adapter accepts a JSON array, or an object with `items` / `data` /
+`products` / `listings`. Each row needs an id (`id` / `external_id` / `sku`), a
+`title`/`name`, a `kind`/`type`, a price, and `"transferable": true`. Prices
+must be integer minor units (`price_minor`) or a decimal **string** (`"12.99"`)
+— a JSON float is refused rather than rounded, because money is never floating
+point here. Optional fields: `description`, `deliverable`, `warranty`,
+`region`, `category`, and `codes` (an array of deliverable codes).
+
+What the sync will and will not do:
+
+- **Imports** gift cards/codes/links, activation and game keys, vouchers, and
+  prepaid/top-up codes — the kinds on the allowlist in
+  `src/lib/suppliers/eligibility.ts`.
+- **Rejects**, with a reason shown to the admin, anything whose kind or title
+  describes account access, whose text carries credential signals (passwords,
+  cookies, session tokens, 2FA/recovery data, combo lists, "full access"),
+  whose supplier does not assert transfer rights, or whose codes fail the
+  inventory payload policy. A single credential-shaped code disqualifies its
+  whole listing.
+- **Never publishes on its own.** Synced products land in
+  `COMPLIANCE_REVIEW`, invisible to the storefront, and activation still
+  requires a supplier whose transfer-right evidence is verified.
+- **Repeats safely.** Sync is idempotent on `(supplierId, externalId)`, so a
+  second run updates prices instead of duplicating the catalogue, and codes
+  already stocked are skipped by fingerprint.
+
+Transport is hardened to protect the token: HTTPS only (plaintext is allowed
+only for a `localhost` feed in development), redirects are refused so the token
+cannot be replayed to another host, and responses are bounded in time, size,
+and item count. The token is never written to the database, the audit log, an
+error message, or the client — only the "configured or not" bit reaches the
+admin UI.
 
 ### Demo accounts (optional, development only)
 
@@ -138,6 +188,11 @@ startup by `src/lib/env.ts` (Zod).
 | `PAYMENT_DSK_ENABLED` | optional | `true` to enable the DSK card adapter once configured |
 | `PAYMENT_NOWPAYMENTS_ENABLED` | optional | `true` to enable the NOWPayments adapter once configured |
 | `PAYMENT_OVGC_ENABLED` | optional | `true` to enable the OVGC adapter once configured |
+| `SUPPLIER_SYNC_ENABLED` | optional | `true` to arm the supplier catalogue feed |
+| `SUPPLIER_FEED_URL` | supplier sync | HTTPS endpoint returning the supplier's listings |
+| `SUPPLIER_API_TOKEN` | supplier sync | Supplier API token (server-only; never committed) |
+| `SUPPLIER_AUTH_HEADER` | optional | Custom auth header name; defaults to Bearer auth |
+| `SUPPLIER_FEED_DEFAULT_CATEGORY` | optional | Category slug for listings that name none |
 
 Production startup rejects missing `SESSION_SECRET` or `EMAIL_TOKEN_PEPPER`;
 development falls back to clearly-marked local values. Never commit real

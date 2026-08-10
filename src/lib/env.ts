@@ -35,6 +35,18 @@ const serverEnvSchema = z.object({
   NOWPAYMENTS_API_KEY: z.string().min(8).optional(),
   NOWPAYMENTS_IPN_SECRET: z.string().min(8).optional(),
   /**
+   * Supplier catalogue sync. Disabled by default; the adapter activates only
+   * when the flag is "true" AND both the feed URL and API token are present.
+   * The token is server-only and must never be committed or pasted into chat.
+   */
+  SUPPLIER_SYNC_ENABLED: z.enum(["true", "false"]).default("false"),
+  SUPPLIER_FEED_URL: z.string().url().optional(),
+  SUPPLIER_API_TOKEN: z.string().min(8).optional(),
+  /** Custom auth header name (e.g. "X-Api-Key"). Defaults to Bearer auth. */
+  SUPPLIER_AUTH_HEADER: z.string().min(2).max(64).optional(),
+  /** Category slug used when a feed listing does not name a Velour category. */
+  SUPPLIER_FEED_DEFAULT_CATEGORY: z.string().min(2).max(64).optional(),
+  /**
    * 32-byte base64 master key for deliverable encryption. Optional until the
    * delivery phase, but validated for shape whenever present.
    */

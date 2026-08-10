@@ -51,9 +51,12 @@ variables).
 
 ## Later
 
-- [ ] Lawful catalog/supplier sync — read-only, filtered to transferable codes,
-      rejecting anything credential-shaped. **Needs a decision:** a supplier that
-      actually offers such inventory.
+- [x] Lawful catalog/supplier sync — read-only, filtered to transferable codes,
+      rejecting anything credential-shaped. Admin-triggered from
+      **Suppliers → Catalogue feed**; token lives in `SUPPLIER_API_TOKEN`.
+      **Still needs a decision:** a supplier that actually offers such
+      inventory — the adapter stays disabled until a real feed URL and token
+      are configured.
 - [ ] Cart / multi-item checkout.
 - [ ] Professional legal review + Bulgarian legal translation of policy pages.
 
