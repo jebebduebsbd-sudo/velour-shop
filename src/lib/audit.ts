@@ -33,6 +33,8 @@ export const AUDIT_ACTIONS = {
   disputeOpened: "dispute.opened",
   disputeAction: "dispute.action",
   adminProductStatus: "admin.product.status",
+  adminProductCreated: "admin.product.created",
+  adminProductUpdated: "admin.product.updated",
   adminSupplierEvidence: "admin.supplier.evidence",
   supplierFeedSync: "admin.supplier.feed_sync",
   inventoryImport: "admin.inventory.import",

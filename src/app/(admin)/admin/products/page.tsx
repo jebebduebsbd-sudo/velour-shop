@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 
 import {
   importInventoryAction,
@@ -6,7 +7,7 @@ import {
   setProductStatusAction,
 } from "@/app/(admin)/actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { Button, buttonClasses } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
 import { prisma } from "@/lib/prisma";
 import { formatMinor } from "@/lib/format";
@@ -45,16 +46,21 @@ export default async function AdminProductsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-xs font-semibold tracking-[0.18em] text-accent uppercase">
-          Admin
-        </p>
-        <h1 className="mt-1 text-3xl font-bold text-ink">Products</h1>
-        <p className="mt-2 text-sm text-ink-muted">
-          A product can only go ACTIVE once linked to a supplier with verified
-          transfer-right evidence. Inventory codes are policy-checked and
-          encrypted on import.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold tracking-[0.18em] text-accent uppercase">
+            Admin
+          </p>
+          <h1 className="mt-1 text-3xl font-bold text-ink">Products</h1>
+          <p className="mt-2 text-sm text-ink-muted">
+            A product can only go ACTIVE once linked to a supplier with verified
+            transfer-right evidence. Inventory codes are policy-checked and
+            encrypted on import.
+          </p>
+        </div>
+        <Link href="/admin/products/new" className={buttonClasses("primary", "md")}>
+          New product
+        </Link>
       </div>
 
       <ul className="space-y-4">
@@ -71,9 +77,17 @@ export default async function AdminProductsPage() {
                     : "No supplier linked"}
                 </p>
               </div>
-              <Badge variant={STATUS_VARIANT[product.status] ?? "muted"}>
-                {product.status.replace(/_/g, " ").toLowerCase()}
-              </Badge>
+              <div className="flex items-center gap-3">
+                <Badge variant={STATUS_VARIANT[product.status] ?? "muted"}>
+                  {product.status.replace(/_/g, " ").toLowerCase()}
+                </Badge>
+                <Link
+                  href={`/admin/products/${product.id}/edit`}
+                  className="text-sm text-accent hover:underline"
+                >
+                  Edit
+                </Link>
+              </div>
             </div>
 
             <div className="mt-4 grid gap-4 lg:grid-cols-3">

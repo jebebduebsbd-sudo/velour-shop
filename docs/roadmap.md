@@ -21,8 +21,9 @@ variables).
       step-up, masked-by-default delivery.
 - [x] Affiliate program (order-gated, non-withdrawable rewards, refund reversal).
 - [x] Refunds (compensating ledger entries) and disputes.
-- [x] Admin: products/suppliers with compliance gating, policy-checked encrypted
-      inventory import, orders/refunds/disputes/users/reviews, providers, audit.
+- [x] Admin: product create/edit UI + products/suppliers with compliance gating,
+      policy-checked encrypted inventory import, orders/refunds/disputes/users/
+      reviews, providers, audit.
 - [x] Order-gated reviews (Verified Vouches).
 - [x] Support tickets, saved searches, warranty.
 - [x] English / Bulgarian UI localization.

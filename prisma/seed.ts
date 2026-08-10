@@ -70,7 +70,8 @@ const PRODUCTS: Record<string, SeedProduct[]> = {
         "An officially issued V-Bucks card code worth 1,000 V-Bucks. You redeem it directly on your own Epic Games account.",
       deliverable:
         "One unused V-Bucks card code worth 1,000 V-Bucks, delivered as text after purchase.",
-      priceMinor: 849,
+      // Priced at half of Epic's EUR store price (€8.99).
+      priceMinor: 449,
       warranty: STANDARD_WARRANTY,
       region: "Global",
       units: 14,
@@ -83,10 +84,40 @@ const PRODUCTS: Record<string, SeedProduct[]> = {
         "An officially issued V-Bucks card code worth 2,800 V-Bucks. You redeem it directly on your own Epic Games account.",
       deliverable:
         "One unused V-Bucks card code worth 2,800 V-Bucks, delivered as text after purchase.",
-      priceMinor: 2199,
+      // Priced at half of Epic's EUR store price (€22.99).
+      priceMinor: 1149,
       warranty: STANDARD_WARRANTY,
       region: "Global",
       units: 6,
+    },
+    {
+      slug: "v-bucks-5000-gift-code-global",
+      title: "V-Bucks 5,000 — Gift Code",
+      subtitle: "Redeem on your own account",
+      description:
+        "An officially issued V-Bucks card code worth 5,000 V-Bucks, delivering the standard 4,000 V-Bucks plus the 1,000 V-Bucks bonus. You redeem it directly on your own Epic Games account.",
+      deliverable:
+        "One unused V-Bucks card code worth 5,000 V-Bucks, delivered as text after purchase.",
+      // Priced at half of Epic's EUR store price (€36.99).
+      priceMinor: 1849,
+      warranty: STANDARD_WARRANTY,
+      region: "Global",
+      units: 9,
+    },
+    {
+      slug: "v-bucks-13500-gift-code-global",
+      title: "V-Bucks 13,500 — Gift Code",
+      subtitle: "Best value — redeem on your own account",
+      description:
+        "An officially issued V-Bucks card code worth 13,500 V-Bucks, the largest standard denomination. You redeem it directly on your own Epic Games account.",
+      deliverable:
+        "One unused V-Bucks card code worth 13,500 V-Bucks, delivered as text after purchase.",
+      // Priced at half of Epic's EUR store price (€89.99).
+      priceMinor: 4499,
+      warranty: STANDARD_WARRANTY,
+      region: "Global",
+      featured: true,
+      units: 5,
     },
   ],
   valorant: [

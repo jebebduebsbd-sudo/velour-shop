@@ -52,6 +52,9 @@ Storefront, authentication, and the wallet ledger are implemented:
   password re-auth; deliverable masked by default and never written to logs
 - Purchases list + order detail pages; catalog priced in EUR to match the
   wallet
+- Admin product editor (create/edit) with EUR pricing parsed to integer minor
+  units, category/supplier linking, and the same activation gate (a product can
+  only go ACTIVE behind a supplier with verified transfer-right evidence)
 - Read-only supplier catalogue sync behind an API token: allowlisted to
   transferable code types, credential-shaped listings rejected with a reason,
   synced products held in compliance review, idempotent on repeat runs
