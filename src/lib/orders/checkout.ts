@@ -1,6 +1,6 @@
 import { recordConversion } from "@/lib/affiliate/service";
 import { AUDIT_ACTIONS, recordAuditEvent } from "@/lib/audit";
-import { sendOrderAlert } from "@/lib/notifications/discord";
+import { sendOrderAlert } from "@/lib/notifications/order-alerts";
 import { prisma } from "@/lib/prisma";
 import {
   lockAndReadBalances,

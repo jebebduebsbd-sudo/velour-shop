@@ -94,6 +94,62 @@ export const GIFT_CODE_TEMPLATES: GiftCodeTemplate[] = [
       { label: "12 Months", slugValue: "12-month", priceMinor: 9499 },
     ],
   },
+  {
+    categorySlug: "valorant",
+    brand: "Valorant Points Card",
+    slugBase: "valorant-points-card",
+    unit: "Valorant Points",
+    region: "EU",
+    denominations: [
+      { label: "1,375 VP", slugValue: "1375-vp", priceMinor: 1249 },
+      { label: "2,400 VP", slugValue: "2400-vp", priceMinor: 2149 },
+      { label: "5,350 VP", slugValue: "5350-vp", priceMinor: 4699 },
+    ],
+  },
+  {
+    categorySlug: "tiktok",
+    brand: "TikTok Coins Voucher",
+    slugBase: "tiktok-coins-voucher",
+    unit: "TikTok Coins",
+    region: "Global",
+    denominations: [
+      { label: "350 Coins", slugValue: "350-coins", priceMinor: 449 },
+      { label: "700 Coins", slugValue: "700-coins", priceMinor: 899 },
+      { label: "1,400 Coins", slugValue: "1400-coins", priceMinor: 1799 },
+    ],
+  },
+  {
+    categorySlug: "minecraft",
+    brand: "Minecraft Minecoins Card",
+    slugBase: "minecraft-minecoins-card",
+    unit: "Minecoins",
+    region: "Global",
+    denominations: [
+      { label: "1,720 Minecoins", slugValue: "1720", priceMinor: 899 },
+      { label: "3,500 Minecoins", slugValue: "3500", priceMinor: 1699 },
+    ],
+  },
+  {
+    categorySlug: "rockstar",
+    brand: "GTA+ Membership Code",
+    slugBase: "gta-plus-membership-code",
+    unit: "GTA+ membership time",
+    region: "Global",
+    denominations: [
+      { label: "1 Month", slugValue: "1-month", priceMinor: 799 },
+      { label: "3 Months", slugValue: "3-month", priceMinor: 2199 },
+    ],
+  },
+  {
+    categorySlug: "instagram",
+    brand: "Meta Verified Voucher",
+    slugBase: "meta-verified-voucher",
+    unit: "Meta Verified subscription time",
+    region: "Global",
+    denominations: [
+      { label: "1 Month", slugValue: "1-month", priceMinor: 1499 },
+    ],
+  },
 ];
 
 export type GiftCodeProductSpec = {

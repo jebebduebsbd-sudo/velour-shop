@@ -90,6 +90,26 @@ export async function linkProductSupplierAction(
   revalidatePath("/admin/products");
 }
 
+export async function autogenProductsAction(formData: FormData): Promise<void> {
+  const session = await guard();
+  const category = String(formData.get("category") ?? "").trim();
+  const { autogenGiftCodeProducts } = await import("@/lib/catalog/autogen");
+  const result = await autogenGiftCodeProducts(
+    category ? { categorySlug: category } : undefined,
+  );
+  await recordAuditEvent({
+    action: AUDIT_ACTIONS.adminProductAutogen,
+    userId: session.user.id,
+    targetType: "Product",
+    metadata: {
+      created: result.created.length,
+      skipped: result.skipped.length,
+      missingCategories: result.missingCategories.length,
+    },
+  });
+  revalidatePath("/admin/products");
+}
+
 export async function importInventoryAction(formData: FormData): Promise<void> {
   const session = await guard();
   const productId = String(formData.get("productId") ?? "");

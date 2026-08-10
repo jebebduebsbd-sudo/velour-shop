@@ -33,6 +33,7 @@ export const AUDIT_ACTIONS = {
   disputeOpened: "dispute.opened",
   disputeAction: "dispute.action",
   adminProductStatus: "admin.product.status",
+  adminProductAutogen: "admin.product.autogen",
   adminSupplierEvidence: "admin.supplier.evidence",
   inventoryImport: "admin.inventory.import",
   adminUserLock: "admin.user.lock",

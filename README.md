@@ -140,6 +140,14 @@ startup by `src/lib/env.ts` (Zod).
 | `PAYMENT_OVGC_ENABLED` | optional | `true` to enable the OVGC adapter once configured |
 | `DISCORD_ORDER_ALERTS_ENABLED` | optional | `true` to post a "New Sale" alert after each fulfilled order |
 | `DISCORD_ORDER_WEBHOOK_URL` | optional | Discord webhook URL for the orders channel (required when alerts are enabled) |
+| `DISCORD_EMBED_COLOR` | optional | Hex color for the Discord embed (defaults to Velour indigo) |
+| `ORDER_ALERT_INCLUDE_EMAIL` | optional | `false` to omit the customer email from alerts (default `true`) |
+| `ORDER_ALERT_PAYMENT_LABEL` | optional | Overrides the payment-method label shown in alerts |
+| `LOW_STOCK_ALERT_THRESHOLD` | optional | Alert when post-sale stock ≤ this; `0` disables (default) |
+| `TELEGRAM_ALERTS_ENABLED` | optional | `true` to also send alerts to Telegram |
+| `TELEGRAM_BOT_TOKEN` | optional | Telegram bot token (required when Telegram alerts are enabled) |
+| `TELEGRAM_CHAT_ID` | optional | Target Telegram chat/channel id |
+| `SUPPLIER_SYNC_ENABLED` | optional | `true` to enable authorized gift-code supplier sync once an adapter is configured (fails closed) |
 
 Production startup rejects missing `SESSION_SECRET` or `EMAIL_TOKEN_PEPPER`;
 development falls back to clearly-marked local values. Never commit real
@@ -164,25 +172,54 @@ access are lazy, so builds work in CI without production configuration.
 | `npm run db:validate` | Validate the Prisma schema |
 | `npm run autogen:products` | Generate gift-code product listings as drafts |
 
-## Order alerts (Discord)
+## Order alerts (Discord + Telegram)
 
-When `DISCORD_ORDER_ALERTS_ENABLED="true"` and `DISCORD_ORDER_WEBHOOK_URL` is
-set, a "New Sale" embed is posted to that channel after each fulfilled order
-(invoice id, payment method, total, customer email, product, remaining stock).
-Create the webhook in Discord under *Edit Channel → Integrations → Webhooks*.
+After each fulfilled order, a "New Sale" alert is fanned out to every enabled
+channel (invoice id, payment method, total, customer email, product, remaining
+stock):
 
-The alert is best-effort and fails closed: unset/disabled sends nothing, and a
-Discord outage never blocks or rolls back a purchase (it fires after the
-checkout transaction commits, exactly like referral attribution). The
-deliverable code is **never** included — only non-secret order metadata is
-sent (`src/lib/notifications/discord.ts`).
+- **Discord** — set `DISCORD_ORDER_ALERTS_ENABLED="true"` and
+  `DISCORD_ORDER_WEBHOOK_URL` (create it under *Edit Channel → Integrations →
+  Webhooks*). Optional `DISCORD_EMBED_COLOR`.
+- **Telegram** — set `TELEGRAM_ALERTS_ENABLED="true"` with `TELEGRAM_BOT_TOKEN`
+  (from @BotFather) and `TELEGRAM_CHAT_ID`.
+
+Presentation is configurable across channels: `ORDER_ALERT_INCLUDE_EMAIL`
+toggles the customer email, and `ORDER_ALERT_PAYMENT_LABEL` overrides the
+method label. When `LOW_STOCK_ALERT_THRESHOLD > 0`, a "Low Stock" alert also
+fires whenever a sale leaves a product at or below that many available units.
+
+Alerts are best-effort and fail closed: unset/disabled channels send nothing,
+each POST retries once and logs a status-only warning on failure, and a
+notification outage never blocks or rolls back a purchase (alerts fire after
+the checkout transaction commits, exactly like referral attribution). The
+deliverable code is **never** included — only non-secret order metadata is sent
+(`src/lib/notifications/`).
+
+> Email alerts are intentionally not shipped yet: they need a mail transport
+> (SMTP vs. a provider API) chosen deliberately. The channel dispatch in
+> `order-alerts.ts` is structured so an email channel drops in alongside
+> Discord/Telegram once that decision is made.
+
+## Supplier sync (authorized gift codes)
+
+A provider-neutral supplier-sync interface (`src/lib/suppliers/`) is the
+foundation for pulling **authorized, transferable** gift/wallet/voucher codes
+from a legitimate distributor into the policy-checked, encrypted inventory
+import path. It mirrors the payment-provider architecture: disabled by default
+and fails closed (`SUPPLIER_SYNC_ENABLED`), so it imports nothing until a real
+distributor adapter, its official API docs, and server-side credentials are in
+place. The compliance gate is unchanged — synced codes still require a verified
+supplier — and it never sources account credentials or non-transferable stock.
 
 ## Gift-code product autogen
 
 `npm run autogen:products` expands the curated gift-code templates in
 `src/lib/catalog/autogen.ts` (brand × denomination) into product listings, so
 the catalog can grow without hand-writing each entry. Pass
-`-- --category=<slug>` to limit it to one category.
+`-- --category=<slug>` to limit it to one category. The same generator is also
+available from the admin Products page (*Generate gift-code listings*), scoped
+to all or one category.
 
 Autogen is intentionally conservative and preserves the compliance gate:
 

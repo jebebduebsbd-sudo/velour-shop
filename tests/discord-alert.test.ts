@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { buildOrderAlertPayload } from "@/lib/notifications/discord";
+import {
+  buildLowStockPayload,
+  buildOrderAlertPayload,
+} from "@/lib/notifications/discord";
 
 /**
  * Order-alert payload: the merchant "New Sale" embed. The critical property is
@@ -45,6 +48,20 @@ describe("buildOrderAlertPayload", () => {
     expect(fields["Total Price"]).toBe("€26.49");
   });
 
+  it("omits the customer email when configured off", () => {
+    const payload = buildOrderAlertPayload(base, {
+      includeCustomerEmail: false,
+    });
+    const names = payload.embeds[0].fields.map((f) => f.name);
+    expect(names).not.toContain("Customer's E-mail");
+    expect(names).toContain("Product");
+  });
+
+  it("applies a configured embed color", () => {
+    const payload = buildOrderAlertPayload(base, { embedColor: 0x123456 });
+    expect(payload.embeds[0].color).toBe(0x123456);
+  });
+
   it("never leaks a deliverable code into the serialized payload", () => {
     // A code is not part of the input type; prove none can slip through even if
     // a caller passed a code-shaped string as, e.g., the product title.
@@ -53,5 +70,21 @@ describe("buildOrderAlertPayload", () => {
     expect(serialized).not.toContain("VELOUR-");
     expect(serialized.toLowerCase()).not.toContain("password");
     expect(serialized).not.toContain("payloadCiphertext");
+  });
+});
+
+describe("buildLowStockPayload", () => {
+  it("renders a Low Stock embed with remaining and threshold", () => {
+    const payload = buildLowStockPayload({
+      productTitle: "Steam Wallet Code — $5",
+      productSlug: "steam-wallet-code-5-usd",
+      remainingStock: 1,
+      threshold: 3,
+    });
+    const embed = payload.embeds[0];
+    expect(embed.title).toBe("Low Stock");
+    const fields = Object.fromEntries(embed.fields.map((f) => [f.name, f.value]));
+    expect(fields["Remaining Stock"]).toBe("1");
+    expect(fields["Threshold"]).toBe("3");
   });
 });

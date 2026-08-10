@@ -33,6 +33,17 @@ export default async function AdminOverviewPage() {
     }),
   ]);
 
+  // Top products by fulfilled-order revenue. Groups on the productTitle
+  // snapshot stored on each order, so no join is needed.
+  const topProducts = await prisma.order.groupBy({
+    by: ["productTitle"],
+    where: { status: "FULFILLED" },
+    _count: { _all: true },
+    _sum: { priceMinor: true },
+    orderBy: { _sum: { priceMinor: "desc" } },
+    take: 5,
+  });
+
   const cards = [
     { label: "Active products", value: String(activeProducts) },
     { label: "In compliance review", value: String(complianceProducts), highlight: complianceProducts > 0 },
@@ -66,6 +77,28 @@ export default async function AdminOverviewPage() {
           </Panel>
         ))}
       </div>
+      <Panel className="p-6">
+        <h2 className="text-sm font-semibold text-ink">Top products by sales</h2>
+        {topProducts.length === 0 ? (
+          <p className="mt-3 text-sm text-ink-faint">No fulfilled orders yet.</p>
+        ) : (
+          <ul className="mt-3 space-y-2 text-sm">
+            {topProducts.map((row) => (
+              <li
+                key={row.productTitle}
+                className="flex items-center justify-between gap-4"
+              >
+                <span className="text-ink">{row.productTitle}</span>
+                <span className="text-ink-faint">
+                  {row._count._all} sold ·{" "}
+                  {formatMinor(row._sum.priceMinor ?? 0, "EUR")}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
+      </Panel>
+
       <Panel className="p-6">
         <h2 className="text-sm font-semibold text-ink">Queues needing attention</h2>
         <ul className="mt-3 space-y-2 text-sm">

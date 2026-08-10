@@ -48,6 +48,39 @@ const serverEnvSchema = z.object({
       message: "DISCORD_ORDER_WEBHOOK_URL must be a Discord webhook URL",
     })
     .optional(),
+  /** Optional hex color for the Discord embed (e.g. "#4f46e5"). */
+  DISCORD_EMBED_COLOR: z
+    .string()
+    .regex(/^#?[0-9a-fA-F]{6}$/, "DISCORD_EMBED_COLOR must be a 6-digit hex")
+    .optional(),
+
+  /**
+   * Order-alert presentation. The customer email is included by default (it is
+   * the merchant's own private channel); set to "false" to omit it. The payment
+   * label overrides the wallet default shown in the alert.
+   */
+  ORDER_ALERT_INCLUDE_EMAIL: z.enum(["true", "false"]).default("true"),
+  ORDER_ALERT_PAYMENT_LABEL: z.string().min(1).max(80).optional(),
+  /**
+   * Low-stock alert threshold. When > 0, an alert fires after a sale that
+   * leaves a product's available units at or below this count. 0 disables it.
+   */
+  LOW_STOCK_ALERT_THRESHOLD: z.coerce.number().int().min(0).default(0),
+
+  /**
+   * Telegram order alerts. Enabled only when the flag is "true" AND both the
+   * bot token and chat id are present. Fails closed like the Discord channel.
+   */
+  TELEGRAM_ALERTS_ENABLED: z.enum(["true", "false"]).default("false"),
+  TELEGRAM_BOT_TOKEN: z.string().min(10).optional(),
+  TELEGRAM_CHAT_ID: z.string().min(1).optional(),
+
+  /**
+   * Authorized gift-code supplier sync. Disabled by default and fails closed:
+   * the live adapter stays inert until a legitimate distributor API, its docs,
+   * and server-side credentials are in place. Never sources account inventory.
+   */
+  SUPPLIER_SYNC_ENABLED: z.enum(["true", "false"]).default("false"),
 
   /**
    * 32-byte base64 master key for deliverable encryption. Optional until the

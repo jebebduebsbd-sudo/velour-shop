@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 
 import {
+  autogenProductsAction,
   importInventoryAction,
   linkProductSupplierAction,
   setProductStatusAction,
@@ -8,6 +9,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Panel } from "@/components/ui/panel";
+import { CATEGORY_DEFS } from "@/lib/categories";
 import { prisma } from "@/lib/prisma";
 import { formatMinor } from "@/lib/format";
 
@@ -56,6 +58,40 @@ export default async function AdminProductsPage() {
           encrypted on import.
         </p>
       </div>
+
+      <Panel className="p-5">
+        <h2 className="text-sm font-semibold text-ink">
+          Generate gift-code listings
+        </h2>
+        <p className="mt-1 text-xs text-ink-faint">
+          Creates any missing gift-code products as <strong>drafts</strong>.
+          Nothing goes live until you link a verified supplier and set it
+          active — this only creates listings, never inventory.
+        </p>
+        <form
+          action={autogenProductsAction}
+          className="mt-3 flex flex-wrap items-end gap-2"
+        >
+          <div className="space-y-1.5">
+            <label className="block text-xs text-ink-faint">Category</label>
+            <select
+              name="category"
+              defaultValue=""
+              className="h-9 rounded-md border border-line bg-surface-2 px-2 text-sm text-ink"
+            >
+              <option value="">All categories</option>
+              {CATEGORY_DEFS.map((category) => (
+                <option key={category.slug} value={category.slug}>
+                  {category.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Button type="submit" variant="secondary" size="sm">
+            Generate drafts
+          </Button>
+        </form>
+      </Panel>
 
       <ul className="space-y-4">
         {products.map((product) => (
