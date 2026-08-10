@@ -17,7 +17,8 @@
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "prisma db seed",
-    "db:validate": "prisma validate"
+    "db:validate": "prisma validate",
+    "autogen:products": "tsx scripts/autogen-products.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.0.2",

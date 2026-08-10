@@ -1,5 +1,6 @@
 import { recordConversion } from "@/lib/affiliate/service";
 import { AUDIT_ACTIONS, recordAuditEvent } from "@/lib/audit";
+import { sendOrderAlert } from "@/lib/notifications/discord";
 import { prisma } from "@/lib/prisma";
 import {
   lockAndReadBalances,
@@ -173,6 +174,11 @@ export async function checkout(input: {
         orderAmountMinor: product.priceMinor,
         currency: product.currency,
       }).catch(() => undefined);
+
+      // Order-completion alert to the merchant's Discord channel. Best-effort
+      // and non-fatal, exactly like referral attribution above — the code is
+      // never included, and a Discord outage never affects the purchase.
+      await sendOrderAlert(outcome.orderId).catch(() => undefined);
     }
 
     return { ok: true, orderId: outcome.orderId, reused: outcome.reused };

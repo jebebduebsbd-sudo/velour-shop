@@ -138,6 +138,8 @@ startup by `src/lib/env.ts` (Zod).
 | `PAYMENT_DSK_ENABLED` | optional | `true` to enable the DSK card adapter once configured |
 | `PAYMENT_NOWPAYMENTS_ENABLED` | optional | `true` to enable the NOWPayments adapter once configured |
 | `PAYMENT_OVGC_ENABLED` | optional | `true` to enable the OVGC adapter once configured |
+| `DISCORD_ORDER_ALERTS_ENABLED` | optional | `true` to post a "New Sale" alert after each fulfilled order |
+| `DISCORD_ORDER_WEBHOOK_URL` | optional | Discord webhook URL for the orders channel (required when alerts are enabled) |
 
 Production startup rejects missing `SESSION_SECRET` or `EMAIL_TOKEN_PEPPER`;
 development falls back to clearly-marked local values. Never commit real
@@ -160,6 +162,39 @@ access are lazy, so builds work in CI without production configuration.
 | `npm run db:deploy` | Apply migrations (production) |
 | `npm run db:seed` | Seed demo catalog |
 | `npm run db:validate` | Validate the Prisma schema |
+| `npm run autogen:products` | Generate gift-code product listings as drafts |
+
+## Order alerts (Discord)
+
+When `DISCORD_ORDER_ALERTS_ENABLED="true"` and `DISCORD_ORDER_WEBHOOK_URL` is
+set, a "New Sale" embed is posted to that channel after each fulfilled order
+(invoice id, payment method, total, customer email, product, remaining stock).
+Create the webhook in Discord under *Edit Channel → Integrations → Webhooks*.
+
+The alert is best-effort and fails closed: unset/disabled sends nothing, and a
+Discord outage never blocks or rolls back a purchase (it fires after the
+checkout transaction commits, exactly like referral attribution). The
+deliverable code is **never** included — only non-secret order metadata is
+sent (`src/lib/notifications/discord.ts`).
+
+## Gift-code product autogen
+
+`npm run autogen:products` expands the curated gift-code templates in
+`src/lib/catalog/autogen.ts` (brand × denomination) into product listings, so
+the catalog can grow without hand-writing each entry. Pass
+`-- --category=<slug>` to limit it to one category.
+
+Autogen is intentionally conservative and preserves the compliance gate:
+
+- Listings are created as **`DRAFT`** — hidden from the storefront and
+  unpurchasable. Nothing goes live until an admin links a supplier with
+  verified transfer-right evidence and sets the product `ACTIVE`
+  (`setProductStatus` enforces that gate).
+- It creates listings only, never inventory. Codes are still imported through
+  the policy-checked, encrypted-at-rest admin import path.
+- Every generated product is a lawful, transferable gift/wallet/voucher code
+  the buyer redeems on their own account — the same product boundary the rest
+  of Velour enforces.
 
 ## Testing
 

@@ -35,6 +35,21 @@ const serverEnvSchema = z.object({
   NOWPAYMENTS_API_KEY: z.string().min(8).optional(),
   NOWPAYMENTS_IPN_SECRET: z.string().min(8).optional(),
   /**
+   * Discord order-alert webhook. When alerts are enabled AND a webhook URL is
+   * present, a "New Sale" notification is posted to the configured channel
+   * after each fulfilled order. Disabled by default and fails closed: a missing
+   * URL simply means no alert is sent. The deliverable code is NEVER included.
+   */
+  DISCORD_ORDER_ALERTS_ENABLED: z.enum(["true", "false"]).default("false"),
+  DISCORD_ORDER_WEBHOOK_URL: z
+    .string()
+    .url()
+    .refine((value) => /\/api\/webhooks\//.test(value), {
+      message: "DISCORD_ORDER_WEBHOOK_URL must be a Discord webhook URL",
+    })
+    .optional(),
+
+  /**
    * 32-byte base64 master key for deliverable encryption. Optional until the
    * delivery phase, but validated for shape whenever present.
    */
@@ -107,4 +122,15 @@ export function paymentWebhookSecret(): string {
 
 export function isProduction(): boolean {
   return serverEnv().NODE_ENV === "production";
+}
+
+/**
+ * Resolves the Discord order-alert webhook, or null when alerts are disabled
+ * or unconfigured. Callers treat null as "do not send" — fail closed, never
+ * throw, so a missing webhook can never break checkout.
+ */
+export function discordOrderWebhookUrl(): string | null {
+  const env = serverEnv();
+  if (env.DISCORD_ORDER_ALERTS_ENABLED !== "true") return null;
+  return env.DISCORD_ORDER_WEBHOOK_URL ?? null;
 }
